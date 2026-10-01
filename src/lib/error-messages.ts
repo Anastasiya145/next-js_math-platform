@@ -1,0 +1,132 @@
+export const errorMessages = {
+  common: {
+    accessDenied: "доступ заборонено",
+    actionFailed: "Не вдалося виконати дію",
+    invalidId: "невірний id",
+    resourceNotFound: "матеріал не знайдено",
+    unknownAction: "невідома дія",
+  },
+  auth: {
+    accessDenied:
+      "Доступ заборонено. Цей сервіс призначений лише для адміністратора платформи.",
+    configuration:
+      "Вхід через Google не налаштований. Перевірте конфігурацію OAuth.",
+    googleSetup:
+      "Google-вхід ще не налаштовано. Перевірте локальну конфігурацію за інструкцією в README.",
+    loginFailed: "Не вдалося увійти.",
+    oauthCallback: "Google не завершив вхід. Спробуйте ще раз.",
+    oauthSignin: "Не вдалося розпочати вхід через Google. Спробуйте ще раз.",
+    credentialsSignin: "Неправильний email або пароль.",
+  },
+  database: {
+    urlMissing: "DATABASE_URL is not configured",
+    studentCreateFailed: "Could not create student account",
+    temporaryPasswordRequired:
+      "A temporary password is required for a new account",
+    driveFolderSaveFailed: "Could not save student Drive folder",
+    homeworkStudentRequired: "At least one student is required",
+    homeworkStudentsMissing: "One or more students were not found",
+  },
+  students: {
+    loadFailed: "Не вдалося завантажити учнів",
+    addFailed: "Не вдалося додати учня",
+    deleteFailed: "Не вдалося видалити учня",
+    saveFailed: "Не вдалося зберегти зміни",
+    notFound: "учня не знайдено",
+    duplicateEmail: "учень з таким email вже існує",
+    duplicateEmailField: "Цей email уже використовується.",
+    invalidId: "невірний id",
+    invalidCredentials:
+      "вкажіть ім'я, коректний email, тимчасовий пароль від 12 символів і клас (1-11)",
+    invalidProfile:
+      "перевірте ім'я, email, тимчасовий пароль і клас (1-11)",
+    emailMustBeText: "Email має бути текстовим значенням.",
+    passwordMustBeText: "Пароль має бути текстовим значенням.",
+    nameRequired: "Вкажіть ім'я учня.",
+    nameTooLong: "Ім'я має містити не більше 120 символів.",
+    gradeRange: "Оберіть клас від 1 до 11.",
+    emailRequired: "Вкажіть email.",
+    emailTooLong: (maximum: number) =>
+      `Email має містити не більше ${maximum} символів.`,
+    emailInvalid: "Вкажіть коректну email-адресу.",
+    passwordRequired: "Введіть пароль.",
+    passwordTooShort: (minimum: number) =>
+      `Пароль має містити щонайменше ${minimum} символів.`,
+    passwordTooLong: (maximum: number) =>
+      `Пароль має містити не більше ${maximum} символів.`,
+    newAccountPasswordRequired:
+      "Для нового облікового запису потрібен пароль.",
+    temporaryPasswordRequired:
+      "для нового email задайте тимчасовий пароль від 12 символів",
+    loginCredentialsInvalid: "Неправильний email або пароль.",
+  },
+  homework: {
+    loadFailed: "Не вдалося завантажити домашні роботи",
+    refreshFailed: "Не вдалося оновити домашні роботи",
+    createFailed: "Не вдалося призначити домашню роботу",
+    gradeSaveFailed: "Не вдалося зберегти оцінку",
+    uploadFailed: "Не вдалося надіслати роботу",
+    noHomeworkSaveFailed: "Не вдалося зафіксувати відсутність ДЗ",
+    dataLoadFailed: "Не вдалося завантажити дані",
+    invalidAssignment:
+      "перевірте назву, посилання, термін і вибраних учнів",
+    invalidScore: "оцінка має бути цілим числом від 0 до 12",
+    assignmentNotFound: "домашку не знайдено",
+    fileNotFound: "файл не знайдено",
+    studentNotFound: "учня не знайдено",
+    studentNotAssigned: "учня не знайдено",
+    studentHasNotSubmitted:
+      "учень ще не надіслав роботу і не позначив її відсутньою",
+    submissionLocked: "оцінену роботу вже не можна змінити",
+    submissionLockedForEdit: "оцінена робота вже закрита для змін",
+    submissionAlreadyGraded: "оцінена робота вже не приймає зміни",
+    submissionResubmitClosed:
+      "роботу вже оцінили, повторне надсилання закрите",
+    fileRequired: "виберіть файл",
+    fileTooLarge: "максимальний розмір файлу — 10 МБ",
+    fileTypeNotAllowed: "дозволені PDF, Word, JPG, PNG, WebP і TXT",
+  },
+  drive: {
+    reconnectRequired: "учитель має повторно підключити Google Drive",
+    connectRequired:
+      "підключіть Google Drive: вийдіть і повторно увійдіть через Google",
+    downloadFailed: "не вдалося завантажити файл із Google Drive",
+    createFolderFailed: "не вдалося створити папку учня в Google Drive",
+    folderIdMissing: "Google Drive не повернув ID папки учня",
+    uploadRejected:
+      "Google Drive не прийняв файл. Перевірте доступ до Drive API.",
+    fileIdMissing: "Google Drive не повернув файл",
+  },
+  materials: {
+    loadFailed: "Не вдалося завантажити матеріали",
+    actionFailed: "Не вдалося виконати дію",
+    actionRequired: "не вказано дію",
+    classNameRequired: "потрібно вказати назву класу",
+    classNotFound: "клас не знайдено",
+    invalidUrl: "неправильне посилання",
+    topicTitleRequired: "потрібно вказати назву теми",
+    topicNotFound: "тему не знайдено",
+    fileNameAndUrlRequired:
+      "потрібні назва файлу та коректне посилання (http/https)",
+  },
+  textbooks: {
+    loadFailed: "Не вдалося завантажити підручники",
+    addFailed: "Не вдалося додати матеріал",
+    deleteFailed: "Не вдалося видалити матеріал",
+    invalidInput: "Перевірте клас, предмет, назву та посилання.",
+    notFound: "матеріал не знайдено",
+  },
+  studentDashboard: {
+    loadFailed: "Не вдалося завантажити навчальні матеріали",
+    refreshFailed: "Не вдалося оновити навчальні матеріали",
+    studentNotFound: "учня не знайдено",
+  },
+} as const;
+
+export const authErrorMessages: Readonly<Record<string, string>> = {
+  AccessDenied: errorMessages.auth.accessDenied,
+  Configuration: errorMessages.auth.configuration,
+  OAuthSignin: errorMessages.auth.oauthSignin,
+  OAuthCallback: errorMessages.auth.oauthCallback,
+  CredentialsSignin: errorMessages.auth.credentialsSignin,
+};

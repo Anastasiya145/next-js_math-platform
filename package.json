@@ -4,18 +4,27 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:system-ca": "node --use-system-ca node_modules/next/dist/bin/next dev",
+    "db:migrate:sqlite": "node --use-system-ca --env-file=.env scripts/migrate-sqlite-to-neon.mjs",
+    "db:migrate:neon": "node --use-system-ca --env-file=.env scripts/apply-neon-migrations.mjs",
+    "db:seed:student-portal": "node --use-system-ca --env-file=.env scripts/seed-student-portal.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@neon/config": "^1.8.3",
+    "@neon/env": "^1.4.8",
+    "@neondatabase/serverless": "^1.1.0",
+    "lucide-react": "^1.49.0",
     "next": "16.3.5",
+    "next-auth": "^5.0.0-beta.32",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

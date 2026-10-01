@@ -1,69 +1,188 @@
-import Image from "next/image";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { Sidebar } from "./components/Sidebar";
+import { router } from "./router";
+import { listStudents } from "@/lib/db";
 
-export default function Home() {
+const today = new Intl.DateTimeFormat("uk-UA", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+}).format(new Date());
+const todayLabel = today.charAt(0).toUpperCase() + today.slice(1);
+
+const CLASS_COLORS = ["blue", "coral", "green"];
+
+export default async function Home() {
+  const session = await auth();
+  if (session?.user.role === "student") redirect(router.student.href);
+
+  const students = await listStudents();
+  const grades = Array.from(new Set(students.map((s) => s.grade))).sort(
+    (a, b) => a - b,
+  );
+  const classes = grades.map((grade) => ({
+    grade,
+    count: students.filter((s) => s.grade === grade).length,
+  }));
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="shell">
+      <Sidebar />
+      <section className="content" id="dashboard">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">{todayLabel}</p>
+            <h1>
+              Добрий день, Анастасія <span>✦</span>
+            </h1>
+          </div>
+          <div className="top-actions">
+            <button className="icon-button" aria-label="Сповіщення">
+              ♧<i />
+            </button>
+            <button className="primary-button">+ Нове завдання</button>
+          </div>
+        </header>
+        <div className="welcome-banner">
+          <div>
+            <span className="banner-label">ФОКУС ТИЖНЯ</span>
+            <h2>Дроби і відсотки</h2>
+            <p>
+              {classes.length}{" "}
+              {classes.length === 1 ? "клас вивчає" : "класи вивчають"} тему.
+              Гарний момент для спільної підбірки.
+            </p>
+          </div>
+          <button className="banner-action">
+            Відкрити підбірку <span>→</span>
+          </button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">ШВИДКИЙ ОГЛЯД</span>
+            <h2>Як ідуть справи</h2>
+          </div>
+          <button className="text-button">
+            Цей тиждень <span>⌄</span>
+          </button>
         </div>
-      </main>
-    </div>
+        <div className="stats-grid">
+          <article className="stat-card">
+            <span className="stat-icon mint">↗</span>
+            <div>
+              <p>Завдань перевірено</p>
+              <strong>24</strong>
+              <small className="positive">
+                +18% <span>до минулого тижня</span>
+              </small>
+            </div>
+          </article>
+          <article className="stat-card">
+            <span className="stat-icon peach">◎</span>
+            <div>
+              <p>Середній результат</p>
+              <strong>
+                78<span className="unit">%</span>
+              </strong>
+              <small className="positive">
+                +4% <span>до минулого тижня</span>
+              </small>
+            </div>
+          </article>
+          <article className="stat-card">
+            <span className="stat-icon lilac">♧</span>
+            <div>
+              <p>Потрібно перевірити</p>
+              <strong>12</strong>
+              <small className="warning">
+                3 термінові <span>до завтра</span>
+              </small>
+            </div>
+          </article>
+          <article className="stat-card accent">
+            <div>
+              <span className="sparkline">∿</span>
+              <p>Активність учнів</p>
+              <strong>
+                86<span className="unit">%</span>
+              </strong>
+              <small>з {students.length} учнів</small>
+            </div>
+          </article>
+        </div>
+        <div className="dashboard-grid">
+          <section className="panel" id="assignments">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">РОБОЧИЙ РИТМ</span>
+                <h2>Найближчі завдання</h2>
+              </div>
+              <button className="text-button">
+                Усі завдання <span>→</span>
+              </button>
+            </div>
+            <div className="assignment-list">
+              <div className="assignment">
+                <span className="subject algebra">A</span>
+                <div>
+                  <b>Лінійні рівняння</b>
+                  <small>7 клас · 1 учень</small>
+                </div>
+                <span className="due today">Сьогодні</span>
+                <span className="arrow">→</span>
+              </div>
+              <div className="assignment">
+                <span className="subject geometry">△</span>
+                <div>
+                  <b>Вступний тест</b>
+                  <small>4 клас · 1 учень</small>
+                </div>
+                <span className="due tomorrow">Завтра</span>
+                <span className="arrow">→</span>
+              </div>
+              <div className="assignment">
+                <span className="subject fractions">⅔</span>
+                <div>
+                  <b>Дроби: базовий рівень</b>
+                  <small>9 клас · 1 учень</small>
+                </div>
+                <span className="due later">18 вер</span>
+                <span className="arrow">→</span>
+              </div>
+            </div>
+          </section>
+          <section className="panel" id="classes">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">ГРУПИ</span>
+                <h2>Мої класи</h2>
+              </div>
+              <button className="round-button" aria-label="Додати клас">
+                +
+              </button>
+            </div>
+            <div className="class-list">
+              {classes.map((c, i) => (
+                <div className="class-row" key={c.grade}>
+                  <span
+                    className={`class-color ${CLASS_COLORS[i % CLASS_COLORS.length]}`}
+                  />
+                  <div>
+                    <b>{c.grade} клас · Математика</b>
+                    <small>
+                      {c.count} {c.count === 1 ? "учень" : "учнів"}
+                    </small>
+                  </div>
+                </div>
+              ))}
+              {classes.length === 0 && (
+                <p className="materials-empty">Поки немає учнів</p>
+              )}
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
   );
 }
