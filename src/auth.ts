@@ -6,10 +6,10 @@ import { validateEmail, validatePassword } from "@/lib/validation";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Google({
+      name: "Математика з Анастасією",
       authorization: {
         params: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/drive.file",
+          scope: "openid email profile https://www.googleapis.com/auth/drive.file",
           access_type: "offline",
           prompt: "consent",
         },
@@ -22,11 +22,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         const email =
-          typeof credentials.email === "string"
-            ? credentials.email.trim().toLowerCase()
-            : "";
-        const password =
-          typeof credentials.password === "string" ? credentials.password : "";
+          typeof credentials.email === "string" ? credentials.email.trim().toLowerCase() : "";
+        const password = typeof credentials.password === "string" ? credentials.password : "";
         if (validateEmail(email) || validatePassword(password)) return null;
 
         const [{ findStudentAccount }, { verifyPassword }] = await Promise.all([
@@ -34,23 +31,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           import("@/lib/passwords"),
         ]);
         const account = await findStudentAccount(email);
-        if (
-          !account ||
-          !verifyPassword(
-            password,
-            account.password_salt,
-            account.password_hash,
-          )
-        ) {
+        if (!account || !verifyPassword(password, account.password_salt, account.password_hash)) {
           return null;
         }
+
+        // Check if this email belongs to the teacher (admin)
+        const adminEmail = "ivanovaanastasiya145@gmail.com";
+        const isTeacher = email === adminEmail;
 
         return {
           id: String(account.id),
           email: account.email,
           name: account.name,
-          role: "student",
-          studentId: account.id,
+          role: isTeacher ? "teacher" : "student",
+          studentId: isTeacher ? undefined : account.id,
         };
       },
     }),
@@ -65,7 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user, account }) {
       if (account?.provider === "credentials") return user.role === "student";
       if (account?.provider !== "google") return false;
-      const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+      const adminEmail = "ivanovaanastasiya145@gmail.com";
       const userEmail = user.email?.trim().toLowerCase();
       return Boolean(adminEmail && userEmail && adminEmail === userEmail);
     },

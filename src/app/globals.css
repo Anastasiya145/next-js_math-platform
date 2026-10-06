@@ -1277,10 +1277,7 @@ button:disabled {
 
 .homework-student-row {
   display: grid;
-  grid-template-columns: minmax(130px, 0.7fr) minmax(180px, 1fr) minmax(
-      300px,
-      1.5fr
-    );
+  grid-template-columns: minmax(130px, 0.7fr) minmax(180px, 1fr) minmax(300px, 1.5fr);
   align-items: center;
   gap: 14px;
   padding: 14px 0;
@@ -2062,667 +2059,388 @@ button:disabled {
   padding: 9px 12px;
   border-bottom: 1px solid var(--line-soft);
 }
-
-.progress-table th {
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.login-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 18px 0;
-  color: var(--muted);
-  font:
-    12px Arial,
-    sans-serif;
-}
-
-.login-divider::before,
-.login-divider::after {
-  flex: 1;
-  border-top: 1px solid var(--line);
-  content: "";
-}
-
-.login-credentials-form {
+/* Modern Login Styles - Dark Gradient Design */
+.login-modern-shell {
   display: grid;
-  gap: 8px;
-  text-align: left;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100dvh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d3d 50%, #3d2d4a 100%);
+  overflow: hidden;
 }
 
-.login-credentials-form label {
-  color: var(--ink);
-  font:
-    600 14px Arial,
-    sans-serif;
-}
-
-.login-credentials-form input {
-  width: 100%;
-  min-height: 44px;
-  margin-bottom: 6px;
-  padding: 9px 11px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink);
-  font:
-    15px Arial,
-    sans-serif;
-}
-
-.secondary-button {
-  min-height: 44px;
-  padding: 10px 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--green);
-  font:
-    600 14px Arial,
-    sans-serif;
-  cursor: pointer;
-}
-
-.secondary-button:hover {
-  background: var(--green-soft);
-}
-
-.student-progress-back {
-  display: inline-block;
-  margin: 18px 0;
-}
-
-.student-progress-panel {
-  margin-top: 8px;
-}
-
-.login-shell {
+/* Left Panel - Hero Section */
+.login-hero-section {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100dvh;
-  padding: 24px;
-  background: var(--background);
+  padding: 60px 50px;
+  position: relative;
 }
 
-.login-card {
+.login-hero-section::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.login-hero-content {
+  max-width: 400px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-hero-title {
+  margin: 0 0 24px;
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -1px;
+  color: #ffffff;
+  font-family: Georgia, serif;
+}
+
+.login-hero-subtitle {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #b0b0b0;
+  font-weight: 300;
+}
+
+/* Right Panel - Form Section */
+.login-form-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 50px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+.login-form-card {
   width: 100%;
-  max-width: 380px;
-  padding: 36px 32px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--surface);
+  max-width: 360px;
+}
+
+.login-form-header {
+  margin-bottom: 32px;
+}
+
+.login-form-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: -0.5px;
+}
+
+/* Role Selection */
+.login-role-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-role-prompt {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
   text-align: center;
 }
 
-.login-card .brand {
+.login-role-buttons-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-role-btn {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
+  gap: 12px;
+  padding: 16px 24px;
+  border: 2px solid #1a1a1a;
+  background: #ffffff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  transition: all 0.25s ease;
 }
 
-.login-card h1 {
-  margin: 0 0 8px;
-  color: var(--ink);
-  font-size: 22px;
+.login-role-btn:hover {
+  background: #1a1a1a;
+  color: #ffffff;
+  transform: translateX(4px);
 }
 
-.login-card p {
-  margin: 0 0 20px;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.5;
+.login-role-btn:active {
+  transform: translateX(2px);
 }
 
-.google-button {
+.role-icon {
+  font-size: 20px;
+}
+
+/* Form Wrapper */
+.login-role-form-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.login-back-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  color: #666;
+  font-weight: 500;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.login-back-link:hover {
+  color: #1a1a1a;
+}
+
+/* Method Section */
+.login-method-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-method-label {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.login-google-button {
   width: 100%;
+  padding: 14px 20px;
+  border: 2px solid #1a1a1a;
+  background: #1a1a1a;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
 
-@media (max-width: 1100px) {
-  .sidebar {
-    flex-basis: 210px;
-    width: 210px;
-  }
-
-  .content {
-    padding: 34px 24px 48px;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .student-form {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .student-form > .primary-button {
-    grid-column: 1 / -1;
-    justify-self: start;
-    margin-top: 0;
-  }
-
-  .student-edit-form {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .student-edit-actions {
-    grid-column: 1 / -1;
-    padding-top: 0;
-  }
-
-  .student-roster-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 20px;
-  }
+.login-google-button:hover:not(:disabled) {
+  background: #333;
+  border-color: #333;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(26, 26, 26, 0.15);
 }
 
-@media (max-width: 900px) {
-  .sidebar {
-    flex-basis: 184px;
-    width: 184px;
-    padding-inline: 12px;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .materials-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .student-dashboard-intro {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 22px;
-  }
-
-  .student-dashboard-summary {
-    max-width: 560px;
-  }
-
-  .textbook-manager-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.login-google-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-@media (max-width: 760px) {
-  .shell {
-    display: flex;
-    flex-direction: column;
-    min-height: 100dvh;
-    overflow-x: clip;
+.login-form-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--surface);
+  transition: border-color 0.2s;
+}
+
+.login-form-input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-soft);
+}
+
+.login-form-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.login-form-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.login-error-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.login-error-message {
+  padding: 10px 12px;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--danger);
+  margin-bottom: 12px;
+}
+
+.login-field-error {
+  display: block;
+  font-size: 12px;
+  color: var(--danger);
+  margin-top: 4px;
+}
+
+.login-form-input[aria-invalid="true"] {
+  border-color: var(--danger) !important;
+}
+
+/* Responsive Media Queries for Modern Login */
+@media (max-width: 1024px) {
+  .login-modern-shell {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .sidebar {
-    display: flex;
-    flex: 0 0 auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 12px;
-    width: 100%;
-    padding: 12px 16px 8px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+  .login-hero-section {
+    padding: 40px 30px;
   }
 
-  .brand {
-    flex: 1 1 170px;
-    min-width: 0;
-    gap: 8px;
-    padding: 0;
-    font-size: 14px;
+  .login-form-section {
+    padding: 40px 30px;
   }
 
-  .brand-mark {
-    flex: 0 0 34px;
-    width: 34px;
-    height: 34px;
+  .login-hero-title {
+    font-size: clamp(32px, 4vw, 44px);
   }
 
-  .brand b {
+  .login-hero-subtitle {
     font-size: 15px;
   }
+}
 
-  .sidebar .nav {
-    order: 3;
-    display: flex;
-    flex: 1 0 100%;
-    min-width: 0;
-    gap: 4px;
-    margin: 0;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: thin;
+@media (max-width: 768px) {
+  .login-modern-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    min-height: auto;
   }
 
-  .nav-item {
-    flex: 0 0 auto;
-    gap: 7px;
-    min-height: 42px;
-    padding: 8px 10px;
+  .login-hero-section {
+    padding: 48px 24px;
+    min-height: auto;
+    order: 1;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d3d 100%);
+  }
+
+  .login-form-section {
+    padding: 40px 24px;
+    order: 2;
+  }
+
+  .login-hero-title {
+    font-size: clamp(28px, 6vw, 40px);
+    margin-bottom: 16px;
+  }
+
+  .login-hero-subtitle {
     font-size: 14px;
-    white-space: nowrap;
   }
 
-  .nav-item span {
-    flex-basis: auto;
-    width: auto;
-    font-size: 18px;
+  .login-form-card {
+    max-width: 100%;
   }
 
-  .sidebar-bottom {
-    display: flex;
-    align-items: center;
-    margin: 0 0 0 auto;
+  .login-form-title {
+    font-size: 24px;
+    margin-bottom: 24px;
   }
 
-  .tip {
-    display: none;
-  }
-
-  .profile {
-    gap: 7px;
-    padding: 0;
-    border-top: 0;
-    font-size: 12px;
-  }
-
-  .profile > span:nth-child(2) {
-    max-width: 118px;
-    min-width: 0;
-  }
-
-  .profile b {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .profile small {
-    display: none;
-  }
-
-  .profile .dots {
-    flex-basis: 40px;
-    width: 40px;
-    height: 40px;
-  }
-
-  .content {
-    flex: 1 1 auto;
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    padding: 24px 16px 40px;
-  }
-
-  .topbar {
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .topbar h1 {
-    font-size: 28px;
-    letter-spacing: -0.4px;
-  }
-
-  .top-actions {
-    flex: 1 1 100%;
-    flex-wrap: wrap;
+  .login-role-buttons-group {
     gap: 10px;
-    width: 100%;
   }
 
-  .welcome-banner {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    min-height: 0;
-    margin-top: 24px;
-    padding: 20px 18px;
+  .login-role-btn {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-modern-shell {
+    grid-template-columns: 1fr;
+    min-height: 100dvh;
   }
 
-  .welcome-banner h2 {
+  .login-hero-section {
+    padding: 40px 20px;
+    min-height: 40%;
+  }
+
+  .login-form-section {
+    padding: 30px 20px;
+    min-height: 60%;
+  }
+
+  .login-hero-content {
+    max-width: 100%;
+  }
+
+  .login-hero-title {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .login-hero-subtitle {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .login-form-header {
+    margin-bottom: 24px;
+  }
+
+  .login-form-title {
     font-size: 22px;
   }
 
-  .section-heading {
-    align-items: center;
-    gap: 10px;
-    margin: 30px 0 14px;
+  .login-role-prompt {
+    font-size: 13px;
   }
 
-  .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .stat-card {
-    flex-direction: column;
+  .login-role-btn {
+    padding: 12px 16px;
+    font-size: 14px;
     gap: 8px;
-    min-width: 0;
-    min-height: 0;
-    padding: 12px;
   }
 
-  .stat-card strong {
-    font-size: 27px;
+  .role-icon {
+    font-size: 18px;
   }
 
-  .stat-card p {
-    overflow-wrap: anywhere;
+  .login-method-section {
+    gap: 14px;
   }
 
-  .stat-card small {
-    line-height: 1.35;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-    margin-top: 12px;
-  }
-
-  .panel {
-    min-width: 0;
-    padding: 18px 16px;
-  }
-
-  .assignment {
-    flex-wrap: wrap;
-    padding: 8px 0;
-  }
-
-  .assignment div {
-    min-width: 0;
-  }
-
-  .materials-add-row:not(.student-form) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .student-form {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
-
-  .student-form > .primary-button {
-    grid-column: auto;
-    justify-self: stretch;
-    width: 100%;
-    margin-top: 0;
-  }
-
-  .student-edit-form {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
-  }
-
-  .student-edit-actions {
-    grid-column: auto;
-    justify-content: flex-start;
-    padding-top: 0;
-  }
-
-  .materials-file {
-    flex-wrap: wrap;
-  }
-
-  .materials-file > div {
-    flex: 1 1 calc(100% - 52px);
-  }
-
-  .icon-action {
-    flex-shrink: 0;
-  }
-
-  .student-account-actions {
-    flex: 1 1 100%;
-    justify-content: space-between;
-  }
-
-  .student-portal-header-inner {
-    flex-wrap: wrap;
-    width: calc(100% - 32px);
-    min-height: 0;
-    padding: 12px 0;
-  }
-
-  .student-portal-header .student-account-actions {
-    flex: 1 1 100%;
-  }
-
-  .student-portal-content {
-    width: calc(100% - 32px);
-    padding: 36px 0 56px;
-  }
-
-  .student-dashboard-intro {
-    gap: 18px;
-    padding-bottom: 20px;
-  }
-
-  .student-dashboard-intro h1 {
-    font-size: 32px;
-  }
-
-  .student-dashboard-summary {
-    gap: 12px;
-    min-height: 100px;
-    padding: 15px;
-  }
-
-  .student-dashboard-summary strong {
-    font-size: 25px;
-  }
-
-  .student-next-lesson {
-    grid-template-columns: 42px minmax(0, 1fr) 40px;
-    gap: 10px;
-    padding: 14px 12px;
-  }
-
-  .student-dashboard-section {
-    margin-top: 32px;
-  }
-
-  .student-section-heading h2 {
-    font-size: 21px;
-  }
-
-  .student-textbook-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .textbook-form-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .student-portal-title {
-    align-items: flex-start;
-  }
-
-  .student-portal-title h1 {
-    font-size: 32px;
-  }
-
-  .student-roster-metrics {
-    width: 100%;
-  }
-
-  .student-roster-metrics > div {
-    flex: 1 1 0;
-    min-width: 0;
-    padding-inline: 14px;
-  }
-
-  .student-roster-metrics > div:first-child {
-    padding-left: 0;
-    border-left: 0;
-  }
-
-  .student-empty-state {
-    padding: 24px 0;
-  }
-
-  .progress-average {
-    margin-top: 8px;
-  }
-
-  .login-shell {
-    min-height: 100dvh;
-    padding: 16px;
-  }
-
-  .login-card {
-    padding: 28px 20px;
-  }
-}
-
-@media (max-width: 420px) {
-  .sidebar {
-    padding-inline: 12px;
-  }
-
-  .profile > span:nth-child(2) {
-    display: none;
-  }
-
-  .content {
-    padding-inline: 12px;
-  }
-
-  .stats-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .stat-card {
-    display: grid;
-    grid-template-columns: 32px minmax(0, 1fr);
-    align-items: start;
-  }
-
-  .stat-card > div {
-    min-width: 0;
-  }
-
-  .stat-card.accent {
-    display: block;
-  }
-
-  .topbar h1 {
-    font-size: 26px;
-  }
-
-  .student-roster-title h1 {
-    font-size: 32px;
-  }
-
-  .student-roster-title > p:last-child {
-    max-width: 30ch;
-    line-height: 1.45;
-  }
-
-  .student-roster-metrics > div {
-    padding-right: 8px;
-    padding-left: 10px;
-  }
-
-  .student-roster-metrics dd {
-    font-size: 21px;
-  }
-
-  .student-portal-header-inner {
-    gap: 10px;
-  }
-
-  .student-portal-content {
-    width: calc(100% - 28px);
-    padding-top: 30px;
-  }
-
-  .student-dashboard-intro h1 {
-    font-size: 29px;
-  }
-
-  .student-dashboard-summary {
-    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-    gap: 8px;
-    padding: 13px 11px;
-  }
-
-  .student-dashboard-summary span,
-  .student-dashboard-summary > div > small {
-    font-size: 11px;
-  }
-
-  .student-dashboard-summary strong {
-    font-size: 23px;
-  }
-
-  .student-next-lesson-icon {
-    width: 38px;
-    height: 38px;
-  }
-
-  .student-next-lesson strong {
-    font-size: 15px;
-  }
-
-  .student-textbook-item {
-    grid-template-columns: 38px minmax(0, 1fr) 38px;
-    gap: 9px;
-    padding: 12px 10px;
-  }
-
-  .student-textbook-mark,
-  .student-textbook-link {
-    width: 38px;
-    height: 38px;
-  }
-
-  .textbook-manager-item {
-    grid-template-columns: 36px minmax(0, 1fr) 36px 36px;
-    gap: 6px;
-    padding-inline: 0;
-  }
-
-  .textbook-manager-icon,
-  .textbook-manager-item > a,
-  .textbook-manager-item > button {
-    width: 36px;
-    height: 36px;
-  }
-
-  .student-portal-title {
-    flex-wrap: wrap;
-    gap: 12px;
-    padding-bottom: 18px;
-  }
-
-  .student-portal-title h1 {
-    font-size: 28px;
-  }
-
-  .student-work-count {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-  }
-
-  .homework-grade-form {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .homework-grade-form .materials-error {
-    grid-column: auto;
+  .login-google-button {
+    padding: 12px 16px;
+    font-size: 14px;
   }
 }

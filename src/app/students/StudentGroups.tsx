@@ -5,7 +5,7 @@ import Link from "next/link";
 import { router } from "../router";
 import { useState } from "react";
 import { StudentEditForm } from "./StudentEditForm";
-import { ChartNoAxesColumnIncreasing, Pencil, Trash2 } from "lucide-react";
+import { ChartNoAxesColumnIncreasing, Pencil, Trash2, Eye } from "lucide-react";
 
 type StudentGroupsProps = {
   students: Student[];
@@ -20,20 +20,12 @@ type StudentGroupsProps = {
   ) => Promise<boolean>;
 };
 
-export function StudentGroups({
-  students,
-  loading,
-  onDelete,
-  onEdit,
-}: StudentGroupsProps) {
+export function StudentGroups({ students, loading, onDelete, onEdit }: StudentGroupsProps) {
   const [editingStudentId, setEditingStudentId] = useState<number | null>(null);
-  const studentsByGrade = students.reduce<Record<number, Student[]>>(
-    (groups, student) => {
-      (groups[student.grade] ??= []).push(student);
-      return groups;
-    },
-    {},
-  );
+  const studentsByGrade = students.reduce<Record<number, Student[]>>((groups, student) => {
+    (groups[student.grade] ??= []).push(student);
+    return groups;
+  }, {});
 
   return (
     <section className="panel students-list-panel" aria-busy={loading}>
@@ -76,20 +68,23 @@ export function StudentGroups({
                       <>
                         <div>
                           <b>{student.name}</b>
-                          <small>
-                            {student.email ?? `${grade} клас · без входу`}
-                          </small>
+                          <small>{student.email ?? `${grade} клас · без входу`}</small>
                         </div>
+                        <Link
+                          className="icon-action"
+                          href={router.studentView(student.id)}
+                          aria-label={`Переглянути кабінет ${student.name}`}
+                          title="Переглянути кабінет учня"
+                        >
+                          <Eye aria-hidden="true" size={18} />
+                        </Link>
                         <Link
                           className="icon-action"
                           href={router.studentProgress(student.id)}
                           aria-label={`Переглянути прогрес ${student.name}`}
                           title="Прогрес учня"
                         >
-                          <ChartNoAxesColumnIncreasing
-                            aria-hidden="true"
-                            size={18}
-                          />
+                          <ChartNoAxesColumnIncreasing aria-hidden="true" size={18} />
                         </Link>
                         <button
                           className="icon-action"

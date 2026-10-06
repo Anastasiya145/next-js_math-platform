@@ -22,11 +22,8 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
   return (
-    <html
-      lang="uk"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="uk" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <AuthProvider session={session}>{children}</AuthProvider>
       </body>
     </html>

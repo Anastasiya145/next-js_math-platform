@@ -4,7 +4,7 @@
 
 This is a web workspace for a mathematics tutor. The current interface centers on a tutor dashboard, students, classes, assignments, and teaching materials. The primary audience is the tutor; do not assume student-facing workflows exist unless the code confirms them.
 
-End-user interface copy is Ukrainian. Keep developer-facing code, comments, and documentation in English unless the user asks otherwise.
+**Language:** The entire application interface is exclusively in Ukrainian. Keep developer-facing code, comments, and documentation in English unless the user asks otherwise. All user-facing text, labels, placeholders, error messages, and UI copy must be in Ukrainian.
 
 ## Stack and project structure
 
@@ -18,11 +18,12 @@ End-user interface copy is Ukrainian. Keep developer-facing code, comments, and 
 
 - Before changing Next.js code, read the relevant guide from `node_modules/next/dist/docs/`. This project uses Next.js 16; do not rely on conventions from other versions.
 - Read the nearby implementation before extending it. Preserve existing APIs and visual conventions unless the task requires a change.
-- Treat `src/app/globals.css` as the source of truth for implemented colors, typography, spacing, and component styles. `DESIGN.md` describes intent, not replacement tokens.
+- **CSS variables mandatory:** All colors, typography, spacing, and component styles come from `src/app/globals.css`. Use CSS variables (`var(--green)`, `var(--danger)`, etc.) in all styles—never hardcode hex colors (#fff, #c33, #fee) in component inline styles or separate CSS files. Create reusable CSS classes in globals.css rather than writing inline style objects. `DESIGN.md` describes intent, not replacement tokens.
 - Keep server-only database access out of client components. Validate API input at the route boundary and return clear HTTP status codes.
 - Keep every application error message in `src/lib/error-messages.ts`. Do not hardcode error text in UI components, API routes, Auth.js config, database code, or catch blocks; reference a named catalog entry instead. Keep HTTP status codes and machine-readable conditions in code, map internal database/provider failures to catalog messages, and never expose raw exception messages to users. Add or update the catalog entry before wiring a new error.
 - Handle loading, empty, success, and error states for user-facing workflows. Keep labels visible and keyboard focus apparent.
 - Do not claim a feature works merely because it appears in navigation or static dashboard content; verify its route and data flow.
+- **Form Validation:** All form inputs must have client-side validation. Use `validateEmail()`, `validatePassword()`, and other validators from `@/lib/validation`. Display field-level error messages below invalid fields with red text and `aria-invalid`/`aria-describedby` attributes. Disable submit button if form is invalid. Show server errors prominently at the top of the form.
 
 ## Product and design context
 

@@ -3,15 +3,12 @@
 import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { errorMessages } from "@/lib/error-messages";
-import {
-  ArrowDown,
-  CalendarDays,
-  ChartNoAxesColumnIncreasing,
-} from "lucide-react";
+import { ArrowDown, CalendarDays, ChartNoAxesColumnIncreasing } from "lucide-react";
 import { router } from "../router";
 import { HomeworkAssignmentCard } from "./HomeworkAssignmentCard";
 import { StudentTextbookList } from "./StudentTextbookList";
 import { ProgressChart } from "../students/[studentId]/ProgressChart";
+import { ChangePasswordModal } from "./ChangePasswordModal";
 import type { StudentDashboardData } from "./types";
 
 async function fetchStudentDashboard(): Promise<StudentDashboardData> {
@@ -21,9 +18,7 @@ async function fetchStudentDashboard(): Promise<StudentDashboardData> {
     error?: string;
   };
   if (!response.ok || !result.data) {
-    throw new Error(
-      result.error ?? errorMessages.studentDashboard.loadFailed,
-    );
+    throw new Error(result.error ?? errorMessages.studentDashboard.loadFailed);
   }
   return result.data;
 }
@@ -42,6 +37,7 @@ export default function StudentPage() {
   const [dashboard, setDashboard] = useState<StudentDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,15 +67,11 @@ export default function StudentPage() {
   };
 
   const homeworks = dashboard?.homeworks ?? [];
-  const activeHomeworks = homeworks.filter(
-    (homework) => !homework.submission.gradedAt,
-  );
+  const activeHomeworks = homeworks.filter((homework) => !homework.submission.gradedAt);
   const completedHomeworks = homeworks
     .filter((homework) => Boolean(homework.submission.gradedAt))
     .sort((first, second) =>
-      (second.submission.gradedAt ?? "").localeCompare(
-        first.submission.gradedAt ?? "",
-      ),
+      (second.submission.gradedAt ?? "").localeCompare(first.submission.gradedAt ?? ""),
     );
   const nextLesson = activeHomeworks
     .filter((homework) => homework.nextLessonAt)
@@ -108,6 +100,14 @@ export default function StudentPage() {
             <button
               className="text-button"
               type="button"
+              onClick={() => setIsPasswordModalOpen(true)}
+              title="Змінити пароль"
+            >
+              Змінити пароль
+            </button>
+            <button
+              className="text-button"
+              type="button"
               onClick={() => signOut({ redirectTo: router.login.href })}
             >
               Вийти
@@ -115,6 +115,10 @@ export default function StudentPage() {
           </div>
         </div>
       </header>
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
       <section className="student-portal-content">
         {error && (
           <p className="materials-error" role="alert">
@@ -129,9 +133,7 @@ export default function StudentPage() {
           <>
             <header className="student-dashboard-intro">
               <div>
-                <p className="eyebrow">
-                  {dashboard?.student.grade} КЛАС · КАБІНЕТ УЧНЯ
-                </p>
+                <p className="eyebrow">{dashboard?.student.grade} КЛАС · КАБІНЕТ УЧНЯ</p>
                 <h1>Навчальний простір</h1>
                 <p className="student-dashboard-welcome">
                   Підручники, домашні завдання й твій прогрес в одному місці.
@@ -141,9 +143,7 @@ export default function StudentPage() {
                 <div>
                   <span>Середній бал</span>
                   <strong>
-                    {dashboard?.averageScore == null
-                      ? "—"
-                      : dashboard?.averageScore.toFixed(1)}
+                    {dashboard?.averageScore == null ? "—" : dashboard?.averageScore.toFixed(1)}
                     <small>/12</small>
                   </strong>
                   <small>
@@ -157,33 +157,22 @@ export default function StudentPage() {
                   <span>Потрібно виконати</span>
                   <strong>{activeHomeworks.length}</strong>
                   <small>
-                    {activeHomeworks.length === 1
-                      ? "домашня робота"
-                      : "домашніх робіт"}
+                    {activeHomeworks.length === 1 ? "домашня робота" : "домашніх робіт"}
                   </small>
                 </div>
               </div>
             </header>
 
             {nextLesson && (
-              <aside
-                className="student-next-lesson"
-                aria-label="Наступний урок"
-              >
+              <aside className="student-next-lesson" aria-label="Наступний урок">
                 <span className="student-next-lesson-icon" aria-hidden="true">
                   <CalendarDays size={22} />
                 </span>
                 <div>
-                  <p>
-                    Наступний урок ·{" "}
-                    {formatLessonDate(nextLesson.nextLessonAt!)}
-                  </p>
+                  <p>Наступний урок · {formatLessonDate(nextLesson.nextLessonAt!)}</p>
                   <strong>{nextLesson.title}</strong>
                 </div>
-                <a
-                  href={`#homework-${nextLesson.id}`}
-                  aria-label="Перейти до завдання"
-                >
+                <a href={`#homework-${nextLesson.id}`} aria-label="Перейти до завдання">
                   <ArrowDown aria-hidden="true" size={19} />
                 </a>
               </aside>
@@ -195,9 +184,7 @@ export default function StudentPage() {
             >
               <div className="student-section-heading">
                 <div>
-                  <p className="eyebrow">
-                    ДЛЯ {dashboard?.student.grade} КЛАСУ
-                  </p>
+                  <p className="eyebrow">ДЛЯ {dashboard?.student.grade} КЛАСУ</p>
                   <h2 id="student-textbooks-title">Доступні підручники</h2>
                 </div>
                 <span>{dashboard?.textbooks.length ?? 0} матеріалів</span>
@@ -208,10 +195,7 @@ export default function StudentPage() {
               />
             </section>
 
-            <section
-              className="student-dashboard-section"
-              aria-labelledby="student-active-title"
-            >
+            <section className="student-dashboard-section" aria-labelledby="student-active-title">
               <div className="student-section-heading">
                 <div>
                   <p className="eyebrow">НА ВИКОНАННЯ</p>
@@ -237,10 +221,7 @@ export default function StudentPage() {
               )}
             </section>
 
-            <section
-              className="student-dashboard-section"
-              aria-labelledby="student-history-title"
-            >
+            <section className="student-dashboard-section" aria-labelledby="student-history-title">
               <div className="student-section-heading">
                 <div>
                   <p className="eyebrow">ТВОЇ РЕЗУЛЬТАТИ</p>
@@ -265,10 +246,7 @@ export default function StudentPage() {
               )}
             </section>
 
-            <section
-              className="student-dashboard-section"
-              aria-labelledby="student-progress-title"
-            >
+            <section className="student-dashboard-section" aria-labelledby="student-progress-title">
               <div className="student-section-heading">
                 <div>
                   <p className="eyebrow">КРОК ЗА КРОКОМ</p>

@@ -5,6 +5,7 @@ export const router = {
   assignments: { href: "/homework", activePath: "/homework" },
   student: { href: "/student", activePath: "/student" },
   studentProgress: (studentId: number) => `/students/${studentId}`,
+  studentView: (studentId: number) => `/students/${studentId}/view`,
   materials: { href: "/materials", activePath: "/materials" },
   students: {
     href: "/students",
@@ -19,15 +20,11 @@ export const router = {
     textbooks: "/api/textbooks",
     textbook: (textbookId: number) => `/api/textbooks/${textbookId}`,
     assignments: "/api/assignments",
-    homeworkSubmission: (homeworkId: number) =>
-      `/api/assignments/${homeworkId}/submission`,
-    homeworkNoHomework: (homeworkId: number) =>
-      `/api/assignments/${homeworkId}/no-homework`,
-    homeworkGrade: (homeworkId: number) =>
-      `/api/assignments/${homeworkId}/grade`,
+    homeworkSubmission: (homeworkId: number) => `/api/assignments/${homeworkId}/submission`,
+    homeworkNoHomework: (homeworkId: number) => `/api/assignments/${homeworkId}/no-homework`,
+    homeworkGrade: (homeworkId: number) => `/api/assignments/${homeworkId}/grade`,
     studentDashboard: "/api/student/dashboard",
-    studentProgress: (studentId: number) =>
-      `/api/students/${studentId}/progress`,
+    studentProgress: (studentId: number) => `/api/students/${studentId}/progress`,
   },
 } as const;
 

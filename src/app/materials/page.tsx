@@ -6,6 +6,8 @@ import { Sidebar } from "../components/Sidebar";
 import { router } from "../router";
 import { DriveFolderForm } from "./DriveFolderForm";
 import { TextbookManager } from "./TextbookManager";
+import { NushTopicsManager } from "./NushTopicsManager";
+import type { NushTopic } from "@/lib/db";
 
 type FileType = "pdf" | "doc" | "image" | "link" | "other";
 
@@ -40,6 +42,8 @@ const FILE_ICON: Record<FileType, string> = {
 
 export default function MaterialsPage() {
   const [classes, setClasses] = useState<ClassFolder[]>([]);
+  const [nushTopics, setNushTopics] = useState<NushTopic[]>([]);
+  const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
@@ -70,6 +74,21 @@ export default function MaterialsPage() {
     }
   };
 
+  const loadNushTopics = async (grade: number) => {
+    try {
+      const response = await fetch(`/api/nush?grade=${grade}`);
+      const result = (await response.json()) as {
+        data?: NushTopic[];
+        error?: string;
+      };
+      if (response.ok && result.data) {
+        setNushTopics(result.data);
+      }
+    } catch {
+      // silently fail
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -89,6 +108,17 @@ export default function MaterialsPage() {
         setClasses(data);
         setSelectedClassId(data[0]?.id ?? null);
         setSelectedTopicId(data[0]?.topics[0]?.id ?? null);
+
+        // Load NUSH topics for first available grade
+        const firstClass = data[0];
+        if (firstClass) {
+          const gradeMatch = firstClass.className.match(/\d+/);
+          if (gradeMatch) {
+            const grade = parseInt(gradeMatch[0], 10);
+            setSelectedGrade(grade);
+            await loadNushTopics(grade);
+          }
+        }
       } catch {
         if (!cancelled) setError(errorMessages.materials.loadFailed);
       } finally {
@@ -104,9 +134,7 @@ export default function MaterialsPage() {
 
   const selectedClass = classes.find((c) => c.id === selectedClassId) ?? null;
   const selectedTopic =
-    selectedClass?.topics.find((t) => t.id === selectedTopicId) ??
-    selectedClass?.topics[0] ??
-    null;
+    selectedClass?.topics.find((t) => t.id === selectedTopicId) ?? selectedClass?.topics[0] ?? null;
 
   const post = async (body: Record<string, unknown>) => {
     setError(null);
@@ -201,10 +229,17 @@ export default function MaterialsPage() {
                 {classes.map((c) => (
                   <li key={c.id}>
                     <button
-                      className={`materials-list-item${
-                        c.id === selectedClassId ? " active" : ""
-                      }`}
-                      onClick={() => setSelectedClassId(c.id)}
+                      className={`materials-list-item${c.id === selectedClassId ? " active" : ""}`}
+                      onClick={() => {
+                        setSelectedClassId(c.id);
+                        // Load NUSH topics for this class grade
+                        const gradeMatch = c.className.match(/\d+/);
+                        if (gradeMatch) {
+                          const grade = parseInt(gradeMatch[0], 10);
+                          setSelectedGrade(grade);
+                          void loadNushTopics(grade);
+                        }
+                      }}
                     >
                       <span>▦</span> {c.className}
                       <em>{c.topics.length}</em>
@@ -281,9 +316,7 @@ export default function MaterialsPage() {
               <ul className="materials-file-list">
                 {selectedTopic?.files.map((f) => (
                   <li key={f.id} className="materials-file">
-                    <span className="materials-file-icon">
-                      {FILE_ICON[f.type]}
-                    </span>
+                    <span className="materials-file-icon">{FILE_ICON[f.type]}</span>
                     <div>
                       <b>{f.name}</b>
                       <small>Додано {f.addedAt}</small>
@@ -299,9 +332,7 @@ export default function MaterialsPage() {
                   </li>
                 ))}
                 {selectedTopic && selectedTopic.files.length === 0 && (
-                  <li className="materials-empty">
-                    Поки немає файлів у цій темі
-                  </li>
+                  <li className="materials-empty">Поки немає файлів у цій темі</li>
                 )}
               </ul>
               {selectedTopic && (
@@ -333,6 +364,14 @@ export default function MaterialsPage() {
               )}
               {!loading && <TextbookManager />}
             </section>
+
+            {selectedGrade && (
+              <NushTopicsManager
+                grade={selectedGrade}
+                topics={nushTopics}
+                onTopicsChanged={() => void loadNushTopics(selectedGrade)}
+              />
+            )}
           </div>
         )}
         {!loading && <TextbookManager />}
