@@ -19,7 +19,6 @@ export function HomeworkForm({ students, onCreate }: HomeworkFormProps) {
   const [title, setTitle] = useState("");
   const [instructions, setInstructions] = useState("");
   const [resourceUrl, setResourceUrl] = useState("");
-  const [dueAt, setDueAt] = useState("");
   const [nextLessonAt, setNextLessonAt] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -39,7 +38,14 @@ export function HomeworkForm({ students, onCreate }: HomeworkFormProps) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!title.trim() || selectedIds.length === 0 || submitting) return;
+    if (
+      !title.trim() ||
+      !resourceUrl.trim() ||
+      !nextLessonAt ||
+      selectedIds.length === 0 ||
+      submitting
+    )
+      return;
 
     setSubmitting(true);
     try {
@@ -47,15 +53,14 @@ export function HomeworkForm({ students, onCreate }: HomeworkFormProps) {
         title: title.trim(),
         instructions: instructions.trim(),
         resourceUrl: resourceUrl.trim(),
-        dueAt: dueAt ? new Date(dueAt).toISOString() : null,
-        nextLessonAt: nextLessonAt || null,
+        dueAt: null,
+        nextLessonAt: nextLessonAt,
         studentIds: selectedIds,
       });
       if (created) {
         setTitle("");
         setInstructions("");
         setResourceUrl("");
-        setDueAt("");
         setNextLessonAt("");
         setSelectedIds([]);
       }
@@ -73,9 +78,7 @@ export function HomeworkForm({ students, onCreate }: HomeworkFormProps) {
         </div>
       </div>
       {students.length === 0 ? (
-        <p className="materials-empty">
-          Спочатку створіть учнівські облікові записи.
-        </p>
+        <p className="materials-empty">Спочатку створіть учнівські облікові записи.</p>
       ) : (
         <form className="homework-form" onSubmit={handleSubmit}>
           <div className="homework-form-fields">
@@ -90,33 +93,24 @@ export function HomeworkForm({ students, onCreate }: HomeworkFormProps) {
               />
             </div>
             <div className="materials-form-field">
-              <label htmlFor="homework-due">Термін здачі</label>
-              <input
-                id="homework-due"
-                type="datetime-local"
-                value={dueAt}
-                onChange={(event) => setDueAt(event.target.value)}
-              />
-            </div>
-            <div className="materials-form-field">
               <label htmlFor="homework-next-lesson">Наступний урок</label>
               <input
                 id="homework-next-lesson"
                 type="date"
                 value={nextLessonAt}
                 onChange={(event) => setNextLessonAt(event.target.value)}
+                required
               />
             </div>
             <div className="materials-form-field homework-resource-field">
-              <label htmlFor="homework-resource">
-                Посилання на матеріал (необов&apos;язково)
-              </label>
+              <label htmlFor="homework-resource">Посилання на матеріал</label>
               <input
                 id="homework-resource"
                 type="url"
                 value={resourceUrl}
                 onChange={(event) => setResourceUrl(event.target.value)}
                 placeholder="https://..."
+                required
               />
             </div>
             <div className="materials-form-field homework-instructions-field">
@@ -160,7 +154,13 @@ export function HomeworkForm({ students, onCreate }: HomeworkFormProps) {
           <button
             className="primary-button"
             type="submit"
-            disabled={submitting || selectedIds.length === 0}
+            disabled={
+              submitting ||
+              !title.trim() ||
+              !resourceUrl.trim() ||
+              !nextLessonAt ||
+              selectedIds.length === 0
+            }
           >
             {submitting ? "Призначення…" : "Призначити домашню роботу"}
           </button>

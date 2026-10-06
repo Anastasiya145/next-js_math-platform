@@ -39,5 +39,4 @@ export const sidebarItems = [
   },
   { route: router.materials, label: "Матеріали", icon: "⎘", badge: null },
   { route: router.students, label: "Учні", icon: "◎", badge: null },
-  { route: router.analytics, label: "Успішність", icon: "⌁", badge: null },
 ] as const;

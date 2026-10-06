@@ -18,12 +18,19 @@ This is a web workspace for a mathematics tutor. The current interface centers o
 
 - Before changing Next.js code, read the relevant guide from `node_modules/next/dist/docs/`. This project uses Next.js 16; do not rely on conventions from other versions.
 - Read the nearby implementation before extending it. Preserve existing APIs and visual conventions unless the task requires a change.
-- **CSS variables mandatory:** All colors, typography, spacing, and component styles come from `src/app/globals.css`. Use CSS variables (`var(--green)`, `var(--danger)`, etc.) in all styles—never hardcode hex colors (#fff, #c33, #fee) in component inline styles or separate CSS files. Create reusable CSS classes in globals.css rather than writing inline style objects. `DESIGN.md` describes intent, not replacement tokens.
+- **CSS variables mandatory:** All colors, typography, spacing, breakpoints, and component styles come from `src/app/globals.css`.
+  - Use CSS variables (`var(--green)`, `var(--danger)`, `var(--bp-tablet)`, etc.) in all styles
+  - Never hardcode hex colors (#fff, #c33, #fee) in component inline styles or separate CSS files
+  - Never hardcode pixel values (480px, 768px, 500px) for responsive breakpoints; always document breakpoint values as comments linking to CSS variables
+  - Example: `/* Breakpoint: Mobile (--bp-mobile: 480px) */ @media (max-width: 480px) { ... }`
+  - Create reusable CSS classes in globals.css rather than writing inline style objects
+  - `DESIGN.md` describes intent, not replacement tokens
 - Keep server-only database access out of client components. Validate API input at the route boundary and return clear HTTP status codes.
 - Keep every application error message in `src/lib/error-messages.ts`. Do not hardcode error text in UI components, API routes, Auth.js config, database code, or catch blocks; reference a named catalog entry instead. Keep HTTP status codes and machine-readable conditions in code, map internal database/provider failures to catalog messages, and never expose raw exception messages to users. Add or update the catalog entry before wiring a new error.
 - Handle loading, empty, success, and error states for user-facing workflows. Keep labels visible and keyboard focus apparent.
 - Do not claim a feature works merely because it appears in navigation or static dashboard content; verify its route and data flow.
 - **Form Validation:** All form inputs must have client-side validation. Use `validateEmail()`, `validatePassword()`, and other validators from `@/lib/validation`. Display field-level error messages below invalid fields with red text and `aria-invalid`/`aria-describedby` attributes. Disable submit button if form is invalid. Show server errors prominently at the top of the form.
+- **Responsive breakpoints:** Use breakpoint variables from `:root` (--bp-desktop: 1024px, --bp-tablet: 768px, --bp-mobile: 480px, --bp-mobile-small: 500px). Always add comments showing the variable name and pixel value in media queries for clarity.
 
 ## Product and design context
 
