@@ -7,7 +7,7 @@ import {
 } from "@/lib/db";
 import { hashPassword } from "@/lib/passwords";
 import { getTeacherUser } from "@/lib/authz";
-import { errorMessages } from "@/lib/error-messages";
+import { errorMessages, errorCodes } from "@/lib/error-messages";
 import { validateEmail, validatePassword } from "@/lib/validation";
 
 function isUniqueViolation(error: unknown): boolean {
@@ -15,7 +15,7 @@ function isUniqueViolation(error: unknown): boolean {
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    error.code === "23505"
+    error.code === errorCodes.database.uniqueConstraintViolation
   );
 }
 
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   if (Object.values(fieldErrors).some(Boolean)) {
     return NextResponse.json(
       {
-          error: errorMessages.students.invalidCredentials,
+        error: errorMessages.students.invalidCredentials,
         fieldErrors,
       },
       { status: 400 },

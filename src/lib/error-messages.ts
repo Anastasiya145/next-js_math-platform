@@ -1,3 +1,9 @@
+export const errorCodes = {
+  database: {
+    uniqueConstraintViolation: "23505",
+  },
+} as const;
+
 export const errorMessages = {
   common: {
     accessDenied: "доступ заборонено",
@@ -38,8 +44,7 @@ export const errorMessages = {
     invalidId: "невірний id",
     invalidCredentials:
       "вкажіть ім'я, коректний email, тимчасовий пароль від 12 символів і клас (1-11)",
-    invalidProfile:
-      "перевірте ім'я, email, тимчасовий пароль і клас (1-11)",
+    invalidProfile: "перевірте ім'я, email, тимчасовий пароль і клас (1-11)",
     emailMustBeText: "Email має бути текстовим значенням.",
     passwordMustBeText: "Пароль має бути текстовим значенням.",
     nameRequired: "Вкажіть ім'я учня.",
@@ -54,8 +59,7 @@ export const errorMessages = {
       `Пароль має містити щонайменше ${minimum} символів.`,
     passwordTooLong: (maximum: number) =>
       `Пароль має містити не більше ${maximum} символів.`,
-    newAccountPasswordRequired:
-      "Для нового облікового запису потрібен пароль.",
+    newAccountPasswordRequired: "Для нового облікового запису потрібен пароль.",
     temporaryPasswordRequired:
       "для нового email задайте тимчасовий пароль від 12 символів",
     loginCredentialsInvalid: "Неправильний email або пароль.",
@@ -68,8 +72,7 @@ export const errorMessages = {
     uploadFailed: "Не вдалося надіслати роботу",
     noHomeworkSaveFailed: "Не вдалося зафіксувати відсутність ДЗ",
     dataLoadFailed: "Не вдалося завантажити дані",
-    invalidAssignment:
-      "перевірте назву, посилання, термін і вибраних учнів",
+    invalidAssignment: "перевірте назву, посилання, термін і вибраних учнів",
     invalidScore: "оцінка має бути цілим числом від 0 до 12",
     assignmentNotFound: "домашку не знайдено",
     fileNotFound: "файл не знайдено",
@@ -80,8 +83,7 @@ export const errorMessages = {
     submissionLocked: "оцінену роботу вже не можна змінити",
     submissionLockedForEdit: "оцінена робота вже закрита для змін",
     submissionAlreadyGraded: "оцінена робота вже не приймає зміни",
-    submissionResubmitClosed:
-      "роботу вже оцінили, повторне надсилання закрите",
+    submissionResubmitClosed: "роботу вже оцінили, повторне надсилання закрите",
     fileRequired: "виберіть файл",
     fileTooLarge: "максимальний розмір файлу — 10 МБ",
     fileTypeNotAllowed: "дозволені PDF, Word, JPG, PNG, WebP і TXT",
