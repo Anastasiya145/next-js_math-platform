@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getStudentUser, getTeacherUser } from "@/lib/authz";
 import { errorMessages } from "@/lib/error-messages";
-import { getGoogleDriveAccessToken } from "@/lib/google-drive";
+import { getGoogleDriveAccessToken, getTeacherGoogleDriveAccessToken } from "@/lib/google-drive";
 import {
   getHomeworkSubmissionFile,
   getStudentById,
@@ -156,7 +156,9 @@ export async function POST(
     );
   }
 
-  const accessToken = await getGoogleDriveAccessToken(request);
+  // Get teacher's Google Drive access token
+  const teacherEmail = "ivanovaanastasiya145@gmail.com";
+  const accessToken = await getTeacherGoogleDriveAccessToken(teacherEmail);
   if (!accessToken) {
     return NextResponse.json(
       {

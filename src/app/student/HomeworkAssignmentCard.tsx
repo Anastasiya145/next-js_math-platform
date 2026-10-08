@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { ExternalLink, BookOpen } from "lucide-react";
 import { errorMessages } from "@/lib/error-messages";
 import { router } from "../router";
 import type { StudentHomeworkItem } from "./types";
@@ -10,10 +11,7 @@ type HomeworkAssignmentCardProps = {
   onChanged: () => Promise<void>;
 };
 
-export function HomeworkAssignmentCard({
-  homework,
-  onChanged,
-}: HomeworkAssignmentCardProps) {
+export function HomeworkAssignmentCard({ homework, onChanged }: HomeworkAssignmentCardProps) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,10 +85,7 @@ export function HomeworkAssignmentCard({
     : null;
 
   return (
-    <article
-      className="panel student-homework-card"
-      id={`homework-${homework.id}`}
-    >
+    <article className="panel student-homework-card" id={`homework-${homework.id}`}>
       <div className="panel-header">
         <div>
           <div className="student-homework-meta">
@@ -102,60 +97,77 @@ export function HomeworkAssignmentCard({
           <h2>{homework.title}</h2>
         </div>
         {submission.score !== null && (
-          <strong className="student-homework-score">
-            {submission.score}/12
-          </strong>
+          <strong className="student-homework-score">{submission.score}/12</strong>
         )}
       </div>
       {lessonLabel && (
         <p className="student-homework-next-lesson">
-          {submission.gradedAt ? "Урок був:" : "Наступний урок:"}{" "}
-          <strong>{lessonLabel}</strong>
+          {submission.gradedAt ? "Урок був:" : "Наступний урок:"} <strong>{lessonLabel}</strong>
         </p>
       )}
       {homework.instructions && <p>{homework.instructions}</p>}
       {homework.resourceUrl && (
         <a
-          className="text-button"
+          className="student-homework-link"
           href={homework.resourceUrl}
           target="_blank"
           rel="noopener noreferrer"
         >
-          Відкрити матеріал
+          <BookOpen size={18} />
+          <span>Матеріали ДЗ</span>
+          <ExternalLink size={16} />
         </a>
       )}
       {submission.status === "submitted" && (
         <p className="homework-submission-status">
-          {submission.fileName
-            ? `Надіслано: ${submission.fileName}`
-            : "Роботу перевірено"}
+          {submission.fileName ? `Надіслано: ${submission.fileName}` : "Роботу перевірено"}
         </p>
       )}
       {submission.status === "no_homework" && (
         <p className="homework-no-work">Позначено «Немає ДЗ» · 0 балів</p>
       )}
       {submission.gradedAt && submission.feedback && (
-        <p className="student-teacher-feedback">
-          Коментар вчителя: {submission.feedback}
-        </p>
+        <p className="student-teacher-feedback">Коментар вчителя: {submission.feedback}</p>
       )}
       {canChangeSubmission && (
         <div className="student-homework-actions">
           <form className="student-upload-form" onSubmit={handleUpload}>
-            <label htmlFor={`homework-file-${homework.id}`}>
-              Файл роботи (до 10 МБ)
-            </label>
-            <input
-              id={`homework-file-${homework.id}`}
-              type="file"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
-            <button
-              className="primary-button"
-              type="submit"
-              disabled={!file || busy}
-            >
+            <div className="student-file-upload-wrapper">
+              <label htmlFor={`homework-file-${homework.id}`} className="student-file-upload-label">
+                <div className="student-file-upload-icon">📎</div>
+                <div>
+                  <div className="student-file-upload-title">Завантажити роботу</div>
+                  <div className="student-file-upload-hint">
+                    Клікніть, щоб вибрати файл (PDF, DOC, JPG до 10 МБ)
+                  </div>
+                  {file && (
+                    <div className="student-file-selected">
+                      <span>✓ Обрано:</span>
+                      <div className="student-file-name-wrapper">
+                        <span>{file.name}</span>
+                        <button
+                          type="button"
+                          className="student-file-clear"
+                          onClick={() => setFile(null)}
+                          aria-label="Видалити файл"
+                          title="Видалити файл"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </label>
+              <input
+                id={`homework-file-${homework.id}`}
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt"
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                className="student-file-input"
+              />
+            </div>
+            <button className="primary-button" type="submit" disabled={!file || busy}>
               {busy ? "Надсилання…" : "Надіслати роботу"}
             </button>
           </form>

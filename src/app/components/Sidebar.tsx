@@ -67,12 +67,12 @@ export function Sidebar() {
               <small>{session?.user?.email ?? "Репетитор"}</small>
             </span>
             <button
-              className="dots"
-              aria-label="Вийти"
-              title="Вийти"
+              className="logout-btn"
+              aria-label="Вийти з профілю"
+              title="Вийти з профілю"
               onClick={() => signOut({ redirectTo: router.login.href })}
             >
-              ⤳
+              <span>⤳</span> Вийти
             </button>
           </div>
         </div>

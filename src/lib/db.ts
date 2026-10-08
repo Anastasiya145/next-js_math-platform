@@ -697,3 +697,54 @@ export async function addStudentTextbook(input: {
 export async function deleteStudentTextbook(textbookId: number): Promise<void> {
   await getDb()`DELETE FROM student_textbooks WHERE id = ${textbookId}`;
 }
+
+// Teacher Google Drive Tokens
+
+export type TeacherGoogleToken = {
+  email: string;
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string;
+};
+
+export async function getTeacherGoogleToken(
+  email: string,
+): Promise<TeacherGoogleToken | null> {
+  const rows = (await getDb()`
+    SELECT email, access_token AS "accessToken", refresh_token AS "refreshToken",
+           expires_at AS "expiresAt"
+    FROM teacher_google_tokens
+    WHERE lower(email) = ${email.trim().toLowerCase()}
+  `) as DatabaseRow[];
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    email: String(row.email),
+    accessToken: String(row.accessToken),
+    refreshToken: String(row.refreshToken),
+    expiresAt: toTimestamp(row.expiresAt) ?? "",
+  };
+}
+
+export async function saveTeacherGoogleToken(input: {
+  email: string;
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}): Promise<void> {
+  const expiresAtDate = new Date(input.expiresAt);
+  await getDb()`
+    INSERT INTO teacher_google_tokens (email, access_token, refresh_token, expires_at)
+    VALUES (
+      ${input.email.trim().toLowerCase()},
+      ${input.accessToken},
+      ${input.refreshToken},
+      ${expiresAtDate.toISOString()}
+    )
+    ON CONFLICT (email) DO UPDATE SET
+      access_token = EXCLUDED.access_token,
+      refresh_token = EXCLUDED.refresh_token,
+      expires_at = EXCLUDED.expires_at,
+      updated_at = NOW()
+  `;
+}

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@use "tailwindcss";
 
 // ===== SCSS Breakpoint Variables =====
 // Centralized breakpoint definitions for responsive design
@@ -266,17 +266,31 @@ button:disabled {
   letter-spacing: 0;
 }
 
-.profile .dots {
-  display: grid;
-  flex: 0 0 40px;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 0;
+.profile .logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
   border-radius: 8px;
   background: transparent;
   color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 200ms ease;
+  white-space: nowrap;
+}
+
+.profile .logout-btn:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.profile .logout-btn:active {
+  transform: scale(0.98);
 }
 
 .content {
@@ -1982,34 +1996,154 @@ button:disabled {
   gap: 12px;
 }
 
+.student-homework-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 200ms ease;
+  width: fit-content;
+  margin-bottom: 12px;
+}
+
+.student-homework-link:hover {
+  background: var(--info-soft);
+  border-color: var(--info);
+  color: var(--info);
+}
+
+.student-homework-link svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+  transition: transform 150ms ease;
+}
+
+.student-homework-link:hover svg:last-child {
+  transform: translate(2px, -2px);
+}
+
 .student-upload-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
+  grid-template-columns: 1fr auto;
+  align-items: stretch;
   gap: 10px;
 }
 
-.student-upload-form label {
+.student-file-upload-wrapper {
+  position: relative;
   grid-column: 1 / -1;
-  color: var(--ink);
-  font:
-    600 14px Arial,
-    sans-serif;
 }
 
-.student-upload-form input {
+.student-file-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.student-file-upload-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 2px dashed var(--green);
+  border-radius: 8px;
+  background: var(--green-soft);
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.student-file-upload-label:hover {
+  background: color-mix(in srgb, var(--green-soft) 80%, var(--green) 20%);
+  border-color: var(--green);
+}
+
+.student-file-upload-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.student-file-upload-label > div:last-child {
   min-width: 0;
-  min-height: 44px;
-  color: var(--ink);
-  font:
-    14px Arial,
-    sans-serif;
+  flex: 1;
 }
 
-.no-homework-button {
-  justify-self: start;
-  min-height: 40px;
+.student-file-upload-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.student-file-upload-hint {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.student-file-selected {
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 500;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.student-file-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+}
+
+.student-file-name-wrapper > span {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: calc(100% - 30px);
+}
+
+.student-file-clear {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--danger);
+  border-radius: 50%;
+  background: transparent;
   color: var(--danger);
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+  line-height: 1;
+}
+
+.student-file-clear:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.student-file-clear:active {
+  transform: scale(0.9);
+}
+
+.student-upload-form .primary-button {
+  grid-column: auto;
+  align-self: stretch;
 }
 
 .homework-notice {
@@ -2159,7 +2293,7 @@ button:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 100dvh;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d3d 50%, #3d2d4a 100%);
+  background: linear-gradient(135deg, var(--green) 0%, #1d5741 50%, #0f4d38 100%);
   overflow: hidden;
 }
 
@@ -2200,7 +2334,7 @@ button:disabled {
   margin: 0;
   font-size: 16px;
   line-height: 1.7;
-  color: #b0b0b0;
+  color: #d0e5d9;
   font-weight: 300;
 }
 
@@ -2474,7 +2608,7 @@ button:disabled {
     padding: 48px 24px;
     min-height: auto;
     order: 1;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d3d 100%);
+    background: linear-gradient(135deg, var(--green) 0%, #0f4d38 100%);
   }
 
   .login-form-section {
