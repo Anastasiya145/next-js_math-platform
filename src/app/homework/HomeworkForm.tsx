@@ -1,171 +1,54 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
+import { Autocomplete, TextField } from "@mui/material";
+import { api } from "@/lib/api";
+import { errorMessages } from "@/lib/error-messages";
+import { FieldsDialog } from "@/components/FieldsDialog";
+import { router } from "../router";
 import type { HomeworkStudentOption } from "./types";
 
-type HomeworkFormProps = {
+type Props = {
   students: HomeworkStudentOption[];
-  onCreate: (homework: {
-    title: string;
-    instructions: string;
-    resourceUrl: string;
-    dueAt: string | null;
-    nextLessonAt: string | null;
-    studentIds: number[];
-  }) => Promise<boolean>;
+  onCreated: () => Promise<void>;
+  onClose: () => void;
 };
 
-export function HomeworkForm({ students, onCreate }: HomeworkFormProps) {
-  const [title, setTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [resourceUrl, setResourceUrl] = useState("");
-  const [nextLessonAt, setNextLessonAt] = useState("");
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-
-  const toggleStudent = (studentId: number) => {
-    setSelectedIds((currentIds) =>
-      currentIds.includes(studentId)
-        ? currentIds.filter((currentId) => currentId !== studentId)
-        : [...currentIds, studentId],
-    );
-  };
-
-  const selectedLabel = students
-    .filter((student) => selectedIds.includes(student.id))
-    .map((student) => `${student.name} · ${student.grade} клас`)
-    .join(", ");
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (
-      !title.trim() ||
-      !resourceUrl.trim() ||
-      !nextLessonAt ||
-      selectedIds.length === 0 ||
-      submitting
-    )
-      return;
-
-    setSubmitting(true);
-    try {
-      const created = await onCreate({
-        title: title.trim(),
-        instructions: instructions.trim(),
-        resourceUrl: resourceUrl.trim(),
-        dueAt: null,
-        nextLessonAt: nextLessonAt,
-        studentIds: selectedIds,
-      });
-      if (created) {
-        setTitle("");
-        setInstructions("");
-        setResourceUrl("");
-        setNextLessonAt("");
-        setSelectedIds([]);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+export function HomeworkForm({ students, onCreated, onClose }: Props) {
+  const [selected, setSelected] = useState<HomeworkStudentOption[]>([]);
 
   return (
-    <section className="panel homework-create-panel">
-      <div className="panel-header">
-        <div>
-          <span className="eyebrow">НОВЕ ЗАВДАННЯ</span>
-          <h2>Призначити домашню роботу</h2>
-        </div>
-      </div>
-      {students.length === 0 ? (
-        <p className="materials-empty">Спочатку створіть учнівські облікові записи.</p>
-      ) : (
-        <form className="homework-form" onSubmit={handleSubmit}>
-          <div className="homework-form-fields">
-            <div className="materials-form-field">
-              <label htmlFor="homework-title">Тема</label>
-              <input
-                id="homework-title"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                maxLength={160}
-                required
-              />
-            </div>
-            <div className="materials-form-field">
-              <label htmlFor="homework-next-lesson">Наступний урок</label>
-              <input
-                id="homework-next-lesson"
-                type="date"
-                value={nextLessonAt}
-                onChange={(event) => setNextLessonAt(event.target.value)}
-                required
-              />
-            </div>
-            <div className="materials-form-field homework-resource-field">
-              <label htmlFor="homework-resource">Посилання на матеріал</label>
-              <input
-                id="homework-resource"
-                type="url"
-                value={resourceUrl}
-                onChange={(event) => setResourceUrl(event.target.value)}
-                placeholder="https://..."
-                required
-              />
-            </div>
-            <div className="materials-form-field homework-instructions-field">
-              <label htmlFor="homework-instructions">Інструкція учню</label>
-              <textarea
-                id="homework-instructions"
-                value={instructions}
-                onChange={(event) => setInstructions(event.target.value)}
-                maxLength={4000}
-                rows={3}
-              />
-            </div>
-          </div>
-          <fieldset className="homework-student-picker">
-            <legend>Кому призначити</legend>
-            <details className="homework-student-dropdown">
-              <summary title={selectedLabel || "Оберіть учнів"}>
-                <span className="homework-student-selection">
-                  {selectedLabel || "Оберіть учнів"}
-                </span>
-                <span className="homework-dropdown-chevron" aria-hidden="true">
-                  ⌄
-                </span>
-              </summary>
-              <div className="homework-student-options">
-                {students.map((student) => (
-                  <label className="homework-student-option" key={student.id}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(student.id)}
-                      onChange={() => toggleStudent(student.id)}
-                    />
-                    <span>
-                      {student.name} · {student.grade} клас
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </details>
-          </fieldset>
-          <button
-            className="primary-button"
-            type="submit"
-            disabled={
-              submitting ||
-              !title.trim() ||
-              !resourceUrl.trim() ||
-              !nextLessonAt ||
-              selectedIds.length === 0
-            }
-          >
-            {submitting ? "Призначення…" : "Призначити домашню роботу"}
-          </button>
-        </form>
-      )}
-    </section>
+    <FieldsDialog
+      title="Призначити домашню роботу"
+      submitLabel="Призначити"
+      fields={[
+        { name: "title", label: "Назва", maxLength: 160 },
+        { name: "nextLessonAt", label: "Дата наступного уроку", type: "date" },
+        { name: "resourceUrl", label: "Посилання на матеріал", type: "url", optional: true },
+        { name: "instructions", label: "Інструкція", type: "multiline", optional: true },
+      ]}
+      extra={
+        <Autocomplete
+          multiple
+          disableCloseOnSelect
+          options={students}
+          value={selected}
+          onChange={(_, value) => setSelected(value)}
+          getOptionLabel={(student) => `${student.name} · ${student.grade} клас`}
+          renderInput={(params) => (
+            <TextField {...params} label="Кому призначити" required={selected.length === 0} />
+          )}
+        />
+      }
+      extraValid={selected.length > 0}
+      onClose={onClose}
+      onSubmit={async (values) => {
+        await api(router.api.assignments, {
+          body: { ...values, dueAt: null, studentIds: selected.map((student) => student.id) },
+          fallback: errorMessages.homework.createFailed,
+        });
+        await onCreated();
+      }}
+    />
   );
 }

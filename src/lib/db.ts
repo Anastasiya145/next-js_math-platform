@@ -551,6 +551,14 @@ export async function deleteStudent(id: number): Promise<void> {
   await getDb()`DELETE FROM students WHERE id = ${id}`;
 }
 
+// Removes the assignment together with its student links and submissions (FK cascade).
+export async function deleteHomework(homeworkId: number): Promise<boolean> {
+  const rows = (await getDb()`
+    DELETE FROM homeworks WHERE id = ${homeworkId} RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
 // NUS Topics
 
 export type NushTopic = {
@@ -646,6 +654,10 @@ export async function deleteNushTopicMaterial(materialId: number): Promise<void>
   await getDb()`DELETE FROM nush_topic_materials WHERE id = ${materialId}`;
 }
 
+export async function deleteNushTopic(topicId: number): Promise<void> {
+  await getDb()`DELETE FROM nush_topics WHERE id = ${topicId}`;
+}
+
 // Student Textbooks
 
 export type PersonalStudentTextbook = {
@@ -707,9 +719,7 @@ export type TeacherGoogleToken = {
   expiresAt: string;
 };
 
-export async function getTeacherGoogleToken(
-  email: string,
-): Promise<TeacherGoogleToken | null> {
+export async function getTeacherGoogleToken(email: string): Promise<TeacherGoogleToken | null> {
   const rows = (await getDb()`
     SELECT email, access_token AS "accessToken", refresh_token AS "refreshToken",
            expires_at AS "expiresAt"

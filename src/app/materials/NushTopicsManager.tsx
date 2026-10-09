@@ -1,330 +1,213 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Plus } from "lucide-react";
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Avatar,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+} from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import SchoolIcon from "@mui/icons-material/SchoolOutlined";
+import TopicIcon from "@mui/icons-material/TopicOutlined";
+import { api, useAction, useApi } from "@/lib/api";
+import { errorMessages } from "@/lib/error-messages";
+import { GRADES } from "@/lib/format";
 import type { NushTopic, NushTopicMaterial } from "@/lib/db";
+import { ActionRow } from "@/components/ActionRow";
+import { AddAction } from "@/components/AddAction";
+import { DeleteAction } from "@/components/DeleteAction";
+import { LinkList } from "@/components/LinkList";
+import { PageSection } from "@/components/PageSection";
+import { shade, tint, toneAt, type Tone } from "@/components/tones";
+import { router } from "../router";
 
-type NushTopicsManagerProps = {
-  grade: number;
-  topics: NushTopic[];
-  onTopicsChanged: () => void;
-};
+const MATERIAL_TYPES: Array<[NushTopicMaterial["materialType"], string, Tone]> = [
+  ["google_drive", "Google Диск", "success"],
+  ["naurok", "Наурок", "warning"],
+  ["pdf", "PDF", "error"],
+  ["doc", "Документ", "info"],
+  ["link", "Посилання", "primary"],
+  ["other", "Інше", "secondary"],
+];
 
-type MaterialWithForm = NushTopicMaterial & { isLoading?: boolean };
+const postNush = (body: Record<string, unknown>) =>
+  api(router.api.nush, { body, fallback: errorMessages.materials.actionFailed });
 
-export function NushTopicsManager({ grade, topics, onTopicsChanged }: NushTopicsManagerProps) {
-  const [expandedTopicId, setExpandedTopicId] = useState<number | null>(null);
-  const [materials, setMaterials] = useState<Record<number, MaterialWithForm[]>>({});
-  const [isLoadingMaterials, setIsLoadingMaterials] = useState<Record<number, boolean>>({});
-  const [isLoadingTopics, setIsLoadingTopics] = useState(false);
-
-  const [newTopicTitle, setNewTopicTitle] = useState("");
-  const [newTopicDesc, setNewTopicDesc] = useState("");
-
-  const [newMaterialName, setNewMaterialName] = useState("");
-  const [newMaterialUrl, setNewMaterialUrl] = useState("");
-  const [newMaterialType, setNewMaterialType] = useState<NushTopicMaterial["materialType"]>("link");
-
-  const loadMaterialsForTopic = async (topicId: number) => {
-    setIsLoadingMaterials((prev) => ({ ...prev, [topicId]: true }));
-    try {
-      const res = await fetch(`/api/nush?grade=${grade}&topicId=${topicId}`);
-      const result = (await res.json()) as {
-        data?: MaterialWithForm[];
-        error?: string;
-      };
-      if (res.ok && result.data) {
-        setMaterials((prev) => ({ ...prev, [topicId]: result.data || [] }));
-      }
-    } finally {
-      setIsLoadingMaterials((prev) => ({ ...prev, [topicId]: false }));
-    }
-  };
-
-  const handleToggleTopic = (topicId: number) => {
-    if (expandedTopicId === topicId) {
-      setExpandedTopicId(null);
-    } else {
-      setExpandedTopicId(topicId);
-      if (!materials[topicId]) {
-        void loadMaterialsForTopic(topicId);
-      }
-    }
-  };
-
-  const handleAddTopic = async () => {
-    const title = newTopicTitle.trim();
-    if (!title) return;
-
-    setIsLoadingTopics(true);
-    try {
-      const res = await fetch("/api/nush", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create-topic",
-          grade,
-          title,
-          description: newTopicDesc,
-        }),
-      });
-
-      if (res.ok) {
-        setNewTopicTitle("");
-        setNewTopicDesc("");
-        onTopicsChanged();
-      }
-    } finally {
-      setIsLoadingTopics(false);
-    }
-  };
-
-  const handleAddMaterial = async (topicId: number) => {
-    const name = newMaterialName.trim();
-    const url = newMaterialUrl.trim();
-    if (!name || !url) return;
-
-    setMaterials((prev) => ({
-      ...prev,
-      [topicId]: [
-        ...(prev[topicId] || []),
-        {
-          id: -1,
-          topicId,
-          name,
-          url,
-          materialType: newMaterialType,
-          isLoading: true,
-        },
-      ],
-    }));
-
-    try {
-      const res = await fetch("/api/nush", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "add-material",
-          topicId,
-          material: { name, url, materialType: newMaterialType },
-        }),
-      });
-
-      if (res.ok) {
-        setNewMaterialName("");
-        setNewMaterialUrl("");
-        setNewMaterialType("link");
-        await loadMaterialsForTopic(topicId);
-      } else {
-        setMaterials((prev) => ({
-          ...prev,
-          [topicId]: (prev[topicId] || []).filter((m) => m.id !== -1),
-        }));
-      }
-    } catch {
-      setMaterials((prev) => ({
-        ...prev,
-        [topicId]: (prev[topicId] || []).filter((m) => m.id !== -1),
-      }));
-    }
-  };
-
-  const handleDeleteMaterial = async (topicId: number, materialId: number) => {
-    const oldMaterials = materials[topicId];
-    setMaterials((prev) => ({
-      ...prev,
-      [topicId]: (prev[topicId] || []).filter((m) => m.id !== materialId),
-    }));
-
-    try {
-      const res = await fetch("/api/nush", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "delete-material",
-          materialId,
-        }),
-      });
-
-      if (!res.ok) {
-        setMaterials((prev) => ({ ...prev, [topicId]: oldMaterials }));
-      }
-    } catch {
-      setMaterials((prev) => ({ ...prev, [topicId]: oldMaterials }));
-    }
-  };
-
-  const getMaterialTypeIcon = (type: NushTopicMaterial["materialType"]) => {
-    const icons: Record<NushTopicMaterial["materialType"], string> = {
-      google_drive: "☁",
-      naurok: "📚",
-      pdf: "▤",
-      doc: "▥",
-      link: "⛓",
-      other: "▢",
-    };
-    return icons[type];
-  };
+function TopicMaterials({ grade, topicId }: { grade: number; topicId: number }) {
+  const { data, error, loading, reload } = useApi<NushTopicMaterial[]>(
+    `${router.api.nush}?grade=${grade}&topicId=${topicId}`,
+    errorMessages.materials.loadFailed,
+  );
+  const remove = useAction();
+  const materials = data ?? [];
 
   return (
-    <section className="panel materials-column">
-      <div className="panel-header">
-        <div>
-          <span className="eyebrow">ПРОГРАМА НУШ</span>
-          <h2>Теми {grade} класу</h2>
-        </div>
-      </div>
-
-      <ul className="materials-list">
-        {topics.map((topic) => (
-          <li key={topic.id}>
-            <button
-              className={`materials-list-item${expandedTopicId === topic.id ? " active" : ""}`}
-              onClick={() => handleToggleTopic(topic.id)}
-            >
-              <span>◆</span> {topic.title}
-              <em>{materials[topic.id]?.length ?? 0}</em>
-            </button>
-
-            {expandedTopicId === topic.id && (
-              <div
-                className="nush-topic-materials"
-                style={{
-                  paddingLeft: "20px",
-                  borderLeft: "2px solid var(--green-soft)",
-                  marginTop: "8px",
-                }}
-              >
-                {isLoadingMaterials[topic.id] ? (
-                  <p className="materials-empty">Завантаження матеріалів…</p>
-                ) : (
-                  <>
-                    {materials[topic.id]?.length ? (
-                      <ul className="materials-file-list" style={{ margin: "0" }}>
-                        {materials[topic.id]!.map((material) => (
-                          <li
-                            key={material.id}
-                            className="materials-file"
-                            style={{ opacity: material.isLoading ? 0.6 : 1 }}
-                          >
-                            <span className="materials-file-icon">
-                              {getMaterialTypeIcon(material.materialType)}
-                            </span>
-                            <div>
-                              <b>{material.name}</b>
-                              <small>
-                                {
-                                  {
-                                    google_drive: "Google Drive",
-                                    naurok: "NaUrok",
-                                    pdf: "PDF",
-                                    doc: "Документ",
-                                    link: "Посилання",
-                                    other: "Інше",
-                                  }[material.materialType]
-                                }
-                              </small>
-                            </div>
-                            <a
-                              href={material.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-button"
-                            >
-                              Відкрити
-                            </a>
-                            <button
-                              className="icon-action icon-action-danger"
-                              type="button"
-                              aria-label="Видалити матеріал"
-                              onClick={() => handleDeleteMaterial(topic.id, material.id)}
-                              disabled={material.isLoading}
-                            >
-                              <Trash2 aria-hidden="true" size={16} />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="materials-empty" style={{ margin: "8px 0" }}>
-                        Поки немає матеріалів
-                      </p>
-                    )}
-
-                    <div
-                      style={{
-                        marginTop: "12px",
-                        paddingTop: "12px",
-                        borderTop: "1px solid var(--border-light)",
-                      }}
-                    >
-                      <p
-                        style={{
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          textTransform: "uppercase",
-                          color: "var(--text-secondary)",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        Додати матеріал
-                      </p>
-                      <div className="materials-add-row">
-                        <input
-                          placeholder="Назва матеріалу"
-                          value={newMaterialName}
-                          onChange={(e) => setNewMaterialName(e.target.value)}
-                        />
-                      </div>
-                      <div className="materials-add-row">
-                        <input
-                          placeholder="URL (напр. https://...)"
-                          value={newMaterialUrl}
-                          onChange={(e) => setNewMaterialUrl(e.target.value)}
-                        />
-                      </div>
-                      <div className="materials-add-row">
-                        <select
-                          value={newMaterialType}
-                          onChange={(e) =>
-                            setNewMaterialType(e.target.value as NushTopicMaterial["materialType"])
-                          }
-                          style={{ flex: 1 }}
-                        >
-                          <option value="link">Посилання</option>
-                          <option value="google_drive">Google Drive</option>
-                          <option value="naurok">NaUrok</option>
-                          <option value="pdf">PDF</option>
-                          <option value="doc">Документ</option>
-                          <option value="other">Інше</option>
-                        </select>
-                      </div>
-                      <button
-                        className="text-button"
-                        onClick={() => handleAddMaterial(topic.id)}
-                        style={{ marginTop: "8px" }}
-                      >
-                        <Plus size={16} /> Додати матеріал
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      <div className="materials-add-row">
-        <input
-          placeholder="Нова тема (напр. Натуральні числа)"
-          value={newTopicTitle}
-          onChange={(e) => setNewTopicTitle(e.target.value)}
+    <PageSection
+      title="Матеріали"
+      flat
+      tone="secondary"
+      loading={loading}
+      error={error ?? remove.error}
+      empty={materials.length === 0}
+      emptyText="Поки немає матеріалів"
+      action={
+        <AddAction
+          label="Матеріал"
+          color="secondary"
+          title="Новий матеріал"
+          fields={[
+            { name: "name", label: "Назва", maxLength: 160 },
+            { name: "url", label: "Посилання", type: "url" },
+            {
+              name: "materialType",
+              label: "Тип",
+              type: "select",
+              options: MATERIAL_TYPES.map(([value, label]) => [value, label]),
+              defaultValue: "link",
+            },
+          ]}
+          onSubmit={async ({ name, url, materialType }) => {
+            await postNush({
+              action: "add-material",
+              topicId,
+              material: { name, url, materialType },
+            });
+            await reload();
+          }}
         />
-        <button className="text-button" onClick={handleAddTopic} disabled={isLoadingTopics}>
-          + Додати
-        </button>
-      </div>
-    </section>
+      }
+    >
+      <LinkList
+        busy={remove.busy}
+        items={materials.map((item) => ({
+          id: item.id,
+          name: item.name,
+          url: item.url,
+          secondary: MATERIAL_TYPES.find(([type]) => type === item.materialType)?.[1],
+          tone: MATERIAL_TYPES.find(([type]) => type === item.materialType)?.[2],
+        }))}
+        onDelete={async (id) => {
+          if (await remove.run(() => postNush({ action: "delete-material", materialId: id })))
+            await reload();
+        }}
+      />
+    </PageSection>
+  );
+}
+
+function GradeTopics({ grade }: { grade: number }) {
+  const { data, error, loading, reload } = useApi<NushTopic[]>(
+    `${router.api.nush}?grade=${grade}`,
+    errorMessages.materials.loadFailed,
+  );
+  const topics = data ?? [];
+
+  return (
+    <PageSection
+      title={`Теми ${grade} класу`}
+      icon={<SchoolIcon />}
+      tone={toneAt(grade)}
+      loading={loading}
+      error={error}
+      empty={topics.length === 0}
+      emptyText="Для цього класу ще немає тем"
+      action={
+        <AddAction
+          label="Тема"
+          color={toneAt(grade)}
+          title="Нова тема"
+          fields={[
+            { name: "title", label: "Назва теми", maxLength: 160 },
+            { name: "description", label: "Опис", type: "multiline", optional: true },
+          ]}
+          onSubmit={async (values) => {
+            await postNush({ action: "create-topic", grade, ...values });
+            await reload();
+          }}
+        />
+      }
+    >
+      <Stack spacing={1.5}>
+        {topics.map((topic, index) => (
+          <ActionRow
+            key={topic.id}
+            action={
+              <DeleteAction
+                label={`Видалити тему: ${topic.title}`}
+                message={`Тему «${topic.title}» разом з усіма матеріалами буде видалено.`}
+                onConfirm={async () => {
+                  await api(router.api.nush, {
+                    body: { action: "delete-topic", topicId: topic.id },
+                    fallback: errorMessages.materials.deleteFailed,
+                  });
+                  await reload();
+                }}
+              />
+            }
+          >
+            <Accordion
+              disableGutters
+              variant="outlined"
+              slotProps={{ transition: { unmountOnExit: true } }}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Avatar
+                  variant="rounded"
+                  sx={{
+                    mr: 1.5,
+                    alignSelf: "center",
+                    bgcolor: tint(toneAt(index), 16),
+                    color: shade(toneAt(index)),
+                  }}
+                >
+                  <TopicIcon />
+                </Avatar>
+                <Stack>
+                  <Typography sx={{ fontWeight: 600 }}>{topic.title}</Typography>
+                  {topic.description && (
+                    <Typography variant="body2" color="text.secondary">
+                      {topic.description}
+                    </Typography>
+                  )}
+                </Stack>
+              </AccordionSummary>
+              <AccordionDetails>
+                <TopicMaterials grade={grade} topicId={topic.id} />
+              </AccordionDetails>
+            </Accordion>
+          </ActionRow>
+        ))}
+      </Stack>
+    </PageSection>
+  );
+}
+
+export function NushTopicsManager() {
+  const [grade, setGrade] = useState(1);
+
+  return (
+    <Stack spacing={2}>
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        color="primary"
+        value={grade}
+        onChange={(_, value: number | null) => value && setGrade(value)}
+        aria-label="Клас"
+        sx={{ flexWrap: "wrap" }}
+      >
+        {GRADES.map((value) => (
+          <ToggleButton key={value} value={value} aria-label={`${value} клас`}>
+            {value}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+      <GradeTopics key={grade} grade={grade} />
+    </Stack>
   );
 }

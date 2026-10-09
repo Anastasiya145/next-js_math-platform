@@ -14,16 +14,11 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const errorMessage = error ? (authErrorMessages[error] ?? errorMessages.auth.loginFailed) : null;
-  const setupMessage = googleLoginConfigured ? null : errorMessages.auth.googleSetup;
+  const message = error
+    ? (authErrorMessages[error] ?? errorMessages.auth.loginFailed)
+    : googleLoginConfigured
+      ? null
+      : errorMessages.auth.googleSetup;
 
-  return (
-    <main className="login-shell">
-      <LoginForm
-        googleLoginConfigured={googleLoginConfigured}
-        errorMessage={errorMessage}
-        setupMessage={setupMessage}
-      />
-    </main>
-  );
+  return <LoginForm googleLoginConfigured={googleLoginConfigured} message={message} />;
 }

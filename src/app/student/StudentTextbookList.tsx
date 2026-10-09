@@ -1,61 +1,45 @@
-import { ArrowUpRight, BookOpen, Dumbbell } from "lucide-react";
+import { Chip, List } from "@mui/material";
+import BookIcon from "@mui/icons-material/MenuBookOutlined";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import PracticeIcon from "@mui/icons-material/FitnessCenterOutlined";
+import { IconAction, ItemRow } from "@/components/ItemRow";
 import type { StudentDashboardData } from "./types";
-
-type StudentTextbookListProps = {
-  textbooks: StudentDashboardData["textbooks"];
-  grade: number;
-};
 
 export function StudentTextbookList({
   textbooks,
-  grade,
-}: StudentTextbookListProps) {
-  if (textbooks.length === 0) {
-    return (
-      <p className="student-section-empty">
-        Підручники для {grade} класу ще не додані.
-      </p>
-    );
-  }
-
+}: {
+  textbooks: StudentDashboardData["textbooks"];
+}) {
   return (
-    <ul className="student-textbook-list">
-      {textbooks.map((textbook, index) => {
-        const Icon = textbook.resourceType === "practice" ? Dumbbell : BookOpen;
-        return (
-          <li key={textbook.id}>
-            <article className="student-textbook-item">
-              <div
-                className={`student-textbook-mark subject-tone-${index % 3}`}
-              >
-                <Icon aria-hidden="true" size={21} />
-              </div>
-              <div className="student-textbook-copy">
-                <div className="student-textbook-meta">
-                  <span>{textbook.subject}</span>
-                  <span>
-                    {textbook.resourceType === "practice"
-                      ? "Тренажер"
-                      : "Підручник"}
-                  </span>
-                  {textbook.isDemo && <span className="demo-label">Демо</span>}
-                </div>
-                <h3>{textbook.title}</h3>
-                {textbook.author && <p>{textbook.author}</p>}
-              </div>
-              <a
-                className="student-textbook-link"
+    <List disablePadding>
+      {textbooks.map((textbook) => (
+        <ItemRow
+          key={textbook.id}
+          tone={textbook.resourceType === "practice" ? "secondary" : "primary"}
+          icon={textbook.resourceType === "practice" ? <PracticeIcon /> : <BookIcon />}
+          primary={textbook.title}
+          secondary={[
+            textbook.subject,
+            textbook.resourceType === "practice" ? "Тренажер" : "Підручник",
+            textbook.author,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          actions={
+            <>
+              {textbook.isDemo && <Chip size="small" color="info" label="Демо" />}
+              <IconAction
+                label={`Відкрити: ${textbook.title}`}
                 href={textbook.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`Відкрити: ${textbook.title}`}
               >
-                <ArrowUpRight aria-hidden="true" size={19} />
-              </a>
-            </article>
-          </li>
-        );
-      })}
-    </ul>
+                <OpenInNewIcon />
+              </IconAction>
+            </>
+          }
+        />
+      ))}
+    </List>
   );
 }

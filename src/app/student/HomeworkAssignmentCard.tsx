@@ -1,196 +1,175 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { ExternalLink, BookOpen } from "lucide-react";
+import { useState } from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardActions,
+  CardContent,
+  CardHeader,
+  Chip,
+  Link as MuiLink,
+  Stack,
+  Typography,
+} from "@mui/material";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import { api, useAction } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
+import { formatDateTime, formatDay } from "@/lib/format";
+import { shade, tint, type Tone } from "@/components/tones";
 import { router } from "../router";
 import type { StudentHomeworkItem } from "./types";
 
-type HomeworkAssignmentCardProps = {
+type Props = {
   homework: StudentHomeworkItem;
-  onChanged: () => Promise<void>;
+  readOnly?: boolean;
+  onChanged: () => Promise<unknown>;
 };
 
-export function HomeworkAssignmentCard({ homework, onChanged }: HomeworkAssignmentCardProps) {
+export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props) {
   const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const { busy, error, run } = useAction();
   const { submission } = homework;
-  const canChangeSubmission = !submission.gradedAt;
-  const dueLabel = homework.dueAt
-    ? new Intl.DateTimeFormat("uk-UA", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(new Date(homework.dueAt))
-    : "Без терміну";
+  const tone: Tone = submission.gradedAt
+    ? "success"
+    : submission.status === "submitted"
+      ? "info"
+      : submission.status === "no_homework"
+        ? "warning"
+        : "primary";
+  const scoreTone: Tone =
+    submission.score === null || submission.score >= 10
+      ? "success"
+      : submission.score >= 7
+        ? "info"
+        : submission.score >= 4
+          ? "warning"
+          : "error";
 
-  const handleUpload = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!file || busy) return;
-    setError(null);
-    setNotice(null);
-    setBusy(true);
-    try {
-      const formData = new FormData();
-      formData.set("file", file);
-      const response = await fetch(router.api.homeworkSubmission(homework.id), {
-        method: "POST",
-        body: formData,
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(result.error ?? errorMessages.homework.uploadFailed);
-        return;
-      }
+  const upload = async () => {
+    const body = new FormData();
+    body.set("file", file!);
+    if (
+      await run(() =>
+        api(router.api.homeworkSubmission(homework.id), {
+          body,
+          fallback: errorMessages.homework.uploadFailed,
+        }),
+      )
+    ) {
       setFile(null);
-      setNotice("Роботу надіслано вчителю.");
       await onChanged();
-    } catch {
-      setError(errorMessages.homework.uploadFailed);
-    } finally {
-      setBusy(false);
     }
   };
 
-  const handleNoHomework = async () => {
-    if (busy) return;
-    setError(null);
-    setNotice(null);
-    setBusy(true);
-    try {
-      const response = await fetch(router.api.homeworkNoHomework(homework.id), {
-        method: "POST",
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(result.error ?? errorMessages.homework.noHomeworkSaveFailed);
-        return;
-      }
-      setNotice("Відсутність домашнього завдання зафіксовано: 0 балів.");
+  const noHomework = async () => {
+    if (
+      await run(() =>
+        api(router.api.homeworkNoHomework(homework.id), {
+          method: "POST",
+          fallback: errorMessages.homework.noHomeworkSaveFailed,
+        }),
+      )
+    ) {
       await onChanged();
-    } catch {
-      setError(errorMessages.homework.noHomeworkSaveFailed);
-    } finally {
-      setBusy(false);
     }
   };
-
-  const lessonLabel = homework.nextLessonAt
-    ? new Intl.DateTimeFormat("uk-UA", {
-        day: "numeric",
-        month: "long",
-        timeZone: "UTC",
-      }).format(new Date(`${homework.nextLessonAt}T00:00:00.000Z`))
-    : null;
 
   return (
-    <article className="panel student-homework-card" id={`homework-${homework.id}`}>
-      <div className="panel-header">
-        <div>
-          <div className="student-homework-meta">
-            <span className="eyebrow">
-              {submission.gradedAt ? "ПЕРЕВІРЕНО" : `ЗДАТИ ДО: ${dueLabel}`}
-            </span>
-            {homework.isDemo && <span className="demo-label">Приклад</span>}
-          </div>
-          <h2>{homework.title}</h2>
-        </div>
-        {submission.score !== null && (
-          <strong className="student-homework-score">{submission.score}/12</strong>
-        )}
-      </div>
-      {lessonLabel && (
-        <p className="student-homework-next-lesson">
-          {submission.gradedAt ? "Урок був:" : "Наступний урок:"} <strong>{lessonLabel}</strong>
-        </p>
-      )}
-      {homework.instructions && <p>{homework.instructions}</p>}
-      {homework.resourceUrl && (
-        <a
-          className="student-homework-link"
-          href={homework.resourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <BookOpen size={18} />
-          <span>Матеріали ДЗ</span>
-          <ExternalLink size={16} />
-        </a>
-      )}
-      {submission.status === "submitted" && (
-        <p className="homework-submission-status">
-          {submission.fileName ? `Надіслано: ${submission.fileName}` : "Роботу перевірено"}
-        </p>
-      )}
-      {submission.status === "no_homework" && (
-        <p className="homework-no-work">Позначено «Немає ДЗ» · 0 балів</p>
-      )}
-      {submission.gradedAt && submission.feedback && (
-        <p className="student-teacher-feedback">Коментар вчителя: {submission.feedback}</p>
-      )}
-      {canChangeSubmission && (
-        <div className="student-homework-actions">
-          <form className="student-upload-form" onSubmit={handleUpload}>
-            <div className="student-file-upload-wrapper">
-              <label htmlFor={`homework-file-${homework.id}`} className="student-file-upload-label">
-                <div className="student-file-upload-icon">📎</div>
-                <div>
-                  <div className="student-file-upload-title">Завантажити роботу</div>
-                  <div className="student-file-upload-hint">
-                    Клікніть, щоб вибрати файл (PDF, DOC, JPG до 10 МБ)
-                  </div>
-                  {file && (
-                    <div className="student-file-selected">
-                      <span>✓ Обрано:</span>
-                      <div className="student-file-name-wrapper">
-                        <span>{file.name}</span>
-                        <button
-                          type="button"
-                          className="student-file-clear"
-                          onClick={() => setFile(null)}
-                          aria-label="Видалити файл"
-                          title="Видалити файл"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </label>
-              <input
-                id={`homework-file-${homework.id}`}
-                type="file"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                className="student-file-input"
-              />
-            </div>
-            <button className="primary-button" type="submit" disabled={!file || busy}>
-              {busy ? "Надсилання…" : "Надіслати роботу"}
-            </button>
-          </form>
-          <button
-            className="text-button no-homework-button"
-            type="button"
+    <Card
+      id={`homework-${homework.id}`}
+      sx={{
+        borderLeft: `6px solid ${shade(tone)}`,
+        background: `linear-gradient(135deg, ${tint(tone, 9)}, transparent 55%), var(--mui-palette-background-paper)`,
+      }}
+    >
+      <CardHeader
+        title={homework.title}
+        subheader={
+          submission.gradedAt ? "Перевірено" : `Здати до: ${formatDateTime(homework.dueAt)}`
+        }
+        action={
+          submission.score !== null && <Chip color={scoreTone} label={`${submission.score}/12`} />
+        }
+        slotProps={{ title: { variant: "h6", component: "h3" } }}
+      />
+      <CardContent sx={{ pt: 0 }}>
+        <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
+          {homework.nextLessonAt && (
+            <Typography variant="body2" color="text.secondary">
+              {submission.gradedAt ? "Урок був" : "Наступний урок"}:{" "}
+              {formatDay(homework.nextLessonAt)}
+            </Typography>
+          )}
+          {homework.instructions && <Typography>{homework.instructions}</Typography>}
+          {homework.resourceUrl && (
+            <Button
+              size="small"
+              endIcon={<OpenInNewIcon />}
+              href={homework.resourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Матеріали ДЗ
+            </Button>
+          )}
+          {submission.status === "submitted" && (
+            <Alert severity="info" sx={{ width: "100%" }}>
+              {submission.fileName ? `Надіслано: ${submission.fileName}` : "Роботу надіслано"}
+            </Alert>
+          )}
+          {submission.status === "no_homework" && (
+            <Alert severity="warning" sx={{ width: "100%" }}>
+              Позначено «Немає ДЗ» · 0 балів
+            </Alert>
+          )}
+          {submission.gradedAt && submission.feedback && (
+            <Alert severity="success" sx={{ width: "100%" }}>
+              Коментар вчителя: {submission.feedback}
+            </Alert>
+          )}
+          {error && (
+            <Alert severity="error" sx={{ width: "100%" }}>
+              {error}
+            </Alert>
+          )}
+        </Stack>
+      </CardContent>
+      {!readOnly && !submission.gradedAt && (
+        <CardActions sx={{ px: 2, pb: 2, flexWrap: "wrap", gap: 1 }}>
+          <Button
+            component="label"
+            variant="outlined"
+            startIcon={<AttachFileIcon />}
             disabled={busy}
-            onClick={handleNoHomework}
+          >
+            Обрати файл
+            <input
+              hidden
+              type="file"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt"
+              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            />
+          </Button>
+          {file && <Chip label={file.name} onDelete={() => setFile(null)} />}
+          <Button variant="contained" disabled={!file || busy} onClick={upload}>
+            Надіслати роботу
+          </Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <MuiLink
+            component="button"
+            type="button"
+            underline="hover"
+            disabled={busy}
+            onClick={noHomework}
           >
             Немає ДЗ · 0 балів
-          </button>
-        </div>
+          </MuiLink>
+        </CardActions>
       )}
-      {notice && (
-        <p className="homework-notice" role="status">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p className="materials-error" role="alert">
-          {error}
-        </p>
-      )}
-    </article>
+    </Card>
   );
 }

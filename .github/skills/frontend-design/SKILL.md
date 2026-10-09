@@ -10,7 +10,7 @@ license: Complete terms in LICENSE.txt
 ## Project Context
 
 - Use this skill only when the task establishes or substantially changes visual direction. Do not load it for routine component implementation or a targeted UX correction.
-- Read `PRODUCT.md`, `DESIGN.md`, and applicable repository instructions before proposing a visual direction. `src/app/globals.css` is the visual source of truth for implemented values.
+- Read `PRODUCT.md`, `DESIGN.md`, and applicable repository instructions before proposing a visual direction. `src/components/Providers.tsx` (MUI theme) and `src/components/tones.ts` are the visual source of truth for implemented values.
 - Ground visual decisions in the mathematics-tutor audience and the actual workflow. Preserve established styles unless the task explicitly calls for a redesign.
 - Use browser inspection when available; verify the actual viewport dimensions before drawing responsive conclusions.
 

@@ -5,8 +5,8 @@ applyTo: "src/app/**/*.{ts,tsx}"
 
 # Application UI
 
-- Read `DESIGN.md` and the relevant selectors in `src/app/globals.css` before making visual changes.
-- Reuse the current page shell and CSS patterns where appropriate. Keep shared visual changes in `globals.css` instead of accumulating page-specific values.
+- Read `DESIGN.md` and the MUI theme in `src/components/Providers.tsx` before making visual changes.
+- Reuse the shared components in `src/components/` and the tone helpers in `src/components/tones.ts`. Keep shared visual changes in the theme instead of accumulating page-specific values.
 - Preserve the Ukrainian end-user language and established visual hierarchy across desktop, tablet, and phone layouts.
 - Every form control needs a visible label. Icon-only controls need an accessible name; interactive states must work by keyboard and show focus.
 - Keep loading, empty, success, and error feedback clear and close to the affected content or action.

@@ -1,118 +1,103 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Alert, Avatar, Box, Button, Chip, Stack, TextField, Typography } from "@mui/material";
+import DownloadIcon from "@mui/icons-material/FileDownloadOutlined";
+import { api, useAction } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
+import { shade, tint, toneAt } from "@/components/tones";
 import { router } from "../router";
 import type { HomeworkStudentTarget } from "./types";
 
-type HomeworkStudentRowProps = {
-  homeworkId: number;
-  student: HomeworkStudentTarget;
-  onGraded: () => Promise<void>;
+type Props = { homeworkId: number; student: HomeworkStudentTarget; onGraded: () => Promise<void> };
+
+const statusOf = (student: HomeworkStudentTarget) => {
+  if (student.gradedAt) return { label: "Оцінено", color: "success" } as const;
+  if (student.status === "submitted") return { label: "Надіслано", color: "info" } as const;
+  if (student.status === "no_homework") return { label: "Немає ДЗ", color: "warning" } as const;
+  return { label: "Не виконано", color: "default" } as const;
 };
 
-export function HomeworkStudentRow({
-  homeworkId,
-  student,
-  onGraded,
-}: HomeworkStudentRowProps) {
-  const [score, setScore] = useState(
-    String(student.score ?? (student.status === "no_homework" ? 0 : "")),
-  );
+export function HomeworkStudentRow({ homeworkId, student, onGraded }: Props) {
+  const [score, setScore] = useState(student.score === null ? "" : String(student.score));
   const [feedback, setFeedback] = useState(student.feedback);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { busy, error, run } = useAction();
+  const status = statusOf(student);
 
-  const handleGrade = async (event: FormEvent<HTMLFormElement>) => {
+  const save = async (event: FormEvent) => {
     event.preventDefault();
-    setError(null);
-    setSaving(true);
-    try {
-      const response = await fetch(router.api.homeworkGrade(homeworkId), {
+    const saved = await run(() =>
+      api(router.api.homeworkGrade(homeworkId), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId: student.id,
-          score: Number(score),
-          feedback,
-        }),
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(result.error ?? errorMessages.homework.gradeSaveFailed);
-        return;
-      }
-      await onGraded();
-    } catch {
-      setError(errorMessages.homework.gradeSaveFailed);
-    } finally {
-      setSaving(false);
-    }
+        body: { studentId: student.id, score: Number(score), feedback },
+        fallback: errorMessages.homework.gradeSaveFailed,
+      }),
+    );
+    if (saved) await onGraded();
   };
 
   return (
-    <li className="homework-student-row">
-      <div className="homework-student-heading">
-        <b>{student.name}</b>
-        <span>{student.grade} клас</span>
-      </div>
-      {student.status === "submitted" ? (
-        <div className="homework-submission-status">
-          <span>Роботу надіслано</span>
-          {student.fileName && (
-            <a
-              className="text-button"
-              href={`${router.api.homeworkSubmission(homeworkId)}?studentId=${student.id}`}
-            >
-              Завантажити файл
-            </a>
-          )}
-        </div>
-      ) : student.status === "no_homework" ? (
-        <p className="homework-no-work">
-          Учень повідомив, що домашнього завдання немає · 0 балів
-        </p>
-      ) : (
-        <p className="materials-empty">Ще не виконано</p>
-      )}
+    <Box sx={{ py: 1.5 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
+        <Avatar
+          variant="rounded"
+          sx={{
+            width: 36,
+            height: 36,
+            bgcolor: tint(toneAt(student.id), 16),
+            color: shade(toneAt(student.id)),
+            fontWeight: 700,
+          }}
+        >
+          {student.name.charAt(0).toUpperCase()}
+        </Avatar>
+        <Typography sx={{ fontWeight: 500 }}>{student.name}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {student.grade} клас
+        </Typography>
+        <Chip size="small" label={status.label} color={status.color} />
+        {student.fileName && (
+          <Button
+            size="small"
+            startIcon={<DownloadIcon />}
+            href={`${router.api.homeworkSubmission(homeworkId)}?studentId=${student.id}`}
+          >
+            {student.fileName}
+          </Button>
+        )}
+      </Stack>
       {student.status && (
-        <form className="homework-grade-form" onSubmit={handleGrade}>
-          <div className="materials-form-field">
-            <label htmlFor={`score-${homeworkId}-${student.id}`}>
-              Оцінка (0–12)
-            </label>
-            <input
-              id={`score-${homeworkId}-${student.id}`}
-              type="number"
-              min={0}
-              max={12}
-              step={1}
-              value={score}
-              onChange={(event) => setScore(event.target.value)}
-              required
-            />
-          </div>
-          <div className="materials-form-field">
-            <label htmlFor={`feedback-${homeworkId}-${student.id}`}>
-              Коментар учню
-            </label>
-            <input
-              id={`feedback-${homeworkId}-${student.id}`}
-              value={feedback}
-              onChange={(event) => setFeedback(event.target.value)}
-              maxLength={2000}
-            />
-          </div>
-          <button className="text-button" type="submit" disabled={saving}>
-            {saving ? "Збереження…" : "Зберегти оцінку"}
-          </button>
-          {error && (
-            <p className="materials-error" role="alert">
-              {error}
-            </p>
-          )}
-        </form>
+        <Stack
+          component="form"
+          onSubmit={save}
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          sx={{ mt: 1.5 }}
+        >
+          <TextField
+            type="number"
+            label="Оцінка (0–12)"
+            required
+            value={score}
+            onChange={(event) => setScore(event.target.value)}
+            slotProps={{ htmlInput: { min: 0, max: 12, step: 1 } }}
+            sx={{ width: { sm: 180 }, flexShrink: 0 }}
+          />
+          <TextField
+            label="Коментар учню"
+            value={feedback}
+            onChange={(event) => setFeedback(event.target.value)}
+          />
+          <Button type="submit" variant="outlined" disabled={busy || score === ""}>
+            Зберегти
+          </Button>
+        </Stack>
       )}
-    </li>
+      {error && (
+        <Alert severity="error" sx={{ mt: 1 }}>
+          {error}
+        </Alert>
+      )}
+    </Box>
   );
 }

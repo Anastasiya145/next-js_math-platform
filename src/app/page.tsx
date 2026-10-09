@@ -1,188 +1,136 @@
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Sidebar } from "./components/Sidebar";
+import { Button, Chip, Grid, List } from "@mui/material";
+import AssignmentIcon from "@mui/icons-material/AssignmentOutlined";
+import FactCheckIcon from "@mui/icons-material/FactCheckOutlined";
+import GroupsIcon from "@mui/icons-material/GroupsOutlined";
+import PeopleIcon from "@mui/icons-material/PeopleOutlined";
+import SchoolIcon from "@mui/icons-material/SchoolOutlined";
+import StarIcon from "@mui/icons-material/StarOutlineRounded";
+import { auth } from "@/auth";
+import { listHomeworkForTeacher, listStudents } from "@/lib/db";
+import { formatDay } from "@/lib/format";
+import { AppShell } from "@/components/AppShell";
+import { ItemRow } from "@/components/ItemRow";
+import { PageSection } from "@/components/PageSection";
+import { StatCard } from "@/components/StatCard";
+import { toneAt } from "@/components/tones";
 import { router } from "./router";
-import { listStudents } from "@/lib/db";
-
-const today = new Intl.DateTimeFormat("uk-UA", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-}).format(new Date());
-const todayLabel = today.charAt(0).toUpperCase() + today.slice(1);
-
-const CLASS_COLORS = ["blue", "coral", "green"];
 
 export default async function Home() {
   const session = await auth();
-  if (session?.user.role === "student") redirect(router.student.href);
+  if (session?.user.role === "student") redirect(router.student);
 
-  const students = await listStudents();
-  const grades = Array.from(new Set(students.map((s) => s.grade))).sort(
-    (a, b) => a - b,
+  const [students, homeworks] = await Promise.all([listStudents(), listHomeworkForTeacher()]);
+  const classes = Object.entries(Object.groupBy(students, (student) => student.grade)).sort(
+    ([first], [second]) => Number(first) - Number(second),
   );
-  const classes = grades.map((grade) => ({
-    grade,
-    count: students.filter((s) => s.grade === grade).length,
-  }));
+  const pending = (homework: (typeof homeworks)[number]) =>
+    homework.students.filter((student) => student.status && !student.gradedAt).length;
+  const scores = homeworks.flatMap((homework) =>
+    homework.students.flatMap((student) =>
+      student.gradedAt && student.score !== null ? [student.score] : [],
+    ),
+  );
+  const average = scores.length
+    ? (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(1)
+    : "—";
+  const today = new Intl.DateTimeFormat("uk-UA", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
 
   return (
-    <main className="shell">
-      <Sidebar />
-      <section className="content" id="dashboard">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">{todayLabel}</p>
-            <h1>
-              Добрий день, Анастасія <span>✦</span>
-            </h1>
-          </div>
-          <div className="top-actions">
-            <button className="icon-button" aria-label="Сповіщення">
-              ♧<i />
-            </button>
-            <button className="primary-button">+ Нове завдання</button>
-          </div>
-        </header>
-        <div className="welcome-banner">
-          <div>
-            <span className="banner-label">ФОКУС ТИЖНЯ</span>
-            <h2>Дроби і відсотки</h2>
-            <p>
-              {classes.length}{" "}
-              {classes.length === 1 ? "клас вивчає" : "класи вивчають"} тему.
-              Гарний момент для спільної підбірки.
-            </p>
-          </div>
-          <button className="banner-action">
-            Відкрити підбірку <span>→</span>
-          </button>
-        </div>
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">ШВИДКИЙ ОГЛЯД</span>
-            <h2>Як ідуть справи</h2>
-          </div>
-          <button className="text-button">
-            Цей тиждень <span>⌄</span>
-          </button>
-        </div>
-        <div className="stats-grid">
-          <article className="stat-card">
-            <span className="stat-icon mint">↗</span>
-            <div>
-              <p>Завдань перевірено</p>
-              <strong>24</strong>
-              <small className="positive">
-                +18% <span>до минулого тижня</span>
-              </small>
-            </div>
-          </article>
-          <article className="stat-card">
-            <span className="stat-icon peach">◎</span>
-            <div>
-              <p>Середній результат</p>
-              <strong>
-                78<span className="unit">%</span>
-              </strong>
-              <small className="positive">
-                +4% <span>до минулого тижня</span>
-              </small>
-            </div>
-          </article>
-          <article className="stat-card">
-            <span className="stat-icon lilac">♧</span>
-            <div>
-              <p>Потрібно перевірити</p>
-              <strong>12</strong>
-              <small className="warning">
-                3 термінові <span>до завтра</span>
-              </small>
-            </div>
-          </article>
-          <article className="stat-card accent">
-            <div>
-              <span className="sparkline">∿</span>
-              <p>Активність учнів</p>
-              <strong>
-                86<span className="unit">%</span>
-              </strong>
-              <small>з {students.length} учнів</small>
-            </div>
-          </article>
-        </div>
-        <div className="dashboard-grid">
-          <section className="panel" id="assignments">
-            <div className="panel-header">
-              <div>
-                <span className="eyebrow">РОБОЧИЙ РИТМ</span>
-                <h2>Найближчі завдання</h2>
-              </div>
-              <button className="text-button">
-                Усі завдання <span>→</span>
-              </button>
-            </div>
-            <div className="assignment-list">
-              <div className="assignment">
-                <span className="subject algebra">A</span>
-                <div>
-                  <b>Лінійні рівняння</b>
-                  <small>7 клас · 1 учень</small>
-                </div>
-                <span className="due today">Сьогодні</span>
-                <span className="arrow">→</span>
-              </div>
-              <div className="assignment">
-                <span className="subject geometry">△</span>
-                <div>
-                  <b>Вступний тест</b>
-                  <small>4 клас · 1 учень</small>
-                </div>
-                <span className="due tomorrow">Завтра</span>
-                <span className="arrow">→</span>
-              </div>
-              <div className="assignment">
-                <span className="subject fractions">⅔</span>
-                <div>
-                  <b>Дроби: базовий рівень</b>
-                  <small>9 клас · 1 учень</small>
-                </div>
-                <span className="due later">18 вер</span>
-                <span className="arrow">→</span>
-              </div>
-            </div>
-          </section>
-          <section className="panel" id="classes">
-            <div className="panel-header">
-              <div>
-                <span className="eyebrow">ГРУПИ</span>
-                <h2>Мої класи</h2>
-              </div>
-              <button className="round-button" aria-label="Додати клас">
-                +
-              </button>
-            </div>
-            <div className="class-list">
-              {classes.map((c, i) => (
-                <div className="class-row" key={c.grade}>
-                  <span
-                    className={`class-color ${CLASS_COLORS[i % CLASS_COLORS.length]}`}
-                  />
-                  <div>
-                    <b>{c.grade} клас · Математика</b>
-                    <small>
-                      {c.count} {c.count === 1 ? "учень" : "учнів"}
-                    </small>
-                  </div>
-                </div>
+    <AppShell
+      title="Огляд"
+      subtitle={today.charAt(0).toUpperCase() + today.slice(1)}
+      actions={
+        <Button variant="contained" href={router.homework}>
+          Нове завдання
+        </Button>
+      }
+    >
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label="Учнів" value={students.length} icon={<PeopleIcon />} tone="primary" />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard label="Класів" value={classes.length} icon={<GroupsIcon />} tone="info" />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            label="Потрібно перевірити"
+            value={homeworks.reduce((sum, homework) => sum + pending(homework), 0)}
+            icon={<FactCheckIcon />}
+            tone="warning"
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            label="Середній бал"
+            value={average}
+            hint={`${scores.length} оцінених робіт`}
+            icon={<StarIcon />}
+            tone="success"
+          />
+        </Grid>
+      </Grid>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <PageSection
+            title="Останні завдання"
+            icon={<AssignmentIcon />}
+            tone="warning"
+            action={<Button href={router.homework}>Усі завдання</Button>}
+            empty={homeworks.length === 0}
+            emptyText="Поки немає призначених завдань"
+          >
+            <List disablePadding>
+              {homeworks.slice(0, 5).map((homework) => (
+                <ItemRow
+                  key={homework.id}
+                  tone={pending(homework) ? "warning" : "success"}
+                  icon={<AssignmentIcon />}
+                  primary={homework.title}
+                  secondary={`${homework.students.length} учн.${
+                    homework.nextLessonAt ? ` · урок ${formatDay(homework.nextLessonAt)}` : ""
+                  }`}
+                  actions={
+                    <Chip
+                      size="small"
+                      color={pending(homework) ? "warning" : "success"}
+                      label={
+                        pending(homework) ? `На перевірку: ${pending(homework)}` : "Перевірено"
+                      }
+                    />
+                  }
+                />
               ))}
-              {classes.length === 0 && (
-                <p className="materials-empty">Поки немає учнів</p>
-              )}
-            </div>
-          </section>
-        </div>
-      </section>
-    </main>
+            </List>
+          </PageSection>
+        </Grid>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <PageSection
+            title="Мої класи"
+            icon={<SchoolIcon />}
+            tone="info"
+            empty={classes.length === 0}
+            emptyText="Поки немає учнів"
+          >
+            <List disablePadding>
+              {classes.map(([grade, items], index) => (
+                <ItemRow
+                  key={grade}
+                  tone={toneAt(index)}
+                  icon={grade}
+                  primary={`${grade} клас`}
+                  secondary={`${items?.length} учн.`}
+                />
+              ))}
+            </List>
+          </PageSection>
+        </Grid>
+      </Grid>
+    </AppShell>
   );
 }

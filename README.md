@@ -1,74 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Math Tutor Platform
 
-## Getting Started
+Web workspace for a mathematics tutor: students, classes, homework, grades, and teaching materials. The teacher and students have separate cabinets. The interface is in Ukrainian.
 
-First, run the development server:
+See [PRODUCT.md](PRODUCT.md) for scope and [DESIGN.md](DESIGN.md) for visual direction.
+
+## Stack
+
+- Next.js 16 (App Router), React 19, TypeScript
+- Material UI v9; the theme is in `src/components/Providers.tsx`
+- Auth.js (NextAuth v5): Google for the teacher, email/password for students
+- Neon Postgres via `@neondatabase/serverless`; homework files are stored in the teacher's Google Drive
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Neon Database
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run dev:system-ca` | Development server that trusts the system certificate store (Windows) |
+| `npm run build` / `npm start` | Production build and server |
+| `npm run lint` | ESLint |
+| `npm run db:migrate:neon` | Apply pending SQL files from `db/migrations/` |
 
-Application data is stored in Neon Postgres through `@neondatabase/serverless` over HTTPS. Student accounts, assignments, submissions, grades, and Drive file references live in Postgres; uploaded homework files remain in the teacher's Google Drive. Auth.js remains the identity provider.
+There is no test script.
 
-The Neon project is linked to this directory through the git-ignored `.neon` file. Keep `DATABASE_URL` and `DATABASE_URL_UNPOOLED` in the ignored `.env` file and never commit or share their values. The app uses the pooled `DATABASE_URL`; the one-time SQLite migration uses the direct `DATABASE_URL_UNPOOLED`.
+## Environment
 
-The initial schema and student dashboard additions are versioned in `db/migrations/`. Apply pending schema changes with:
+Keep secrets in the git-ignored `.env` or `.env.local`; never commit them or share their values.
 
-```bash
-npm run db:migrate:neon
-```
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Pooled Neon connection used by the app |
+| `DATABASE_URL_UNPOOLED` | Direct Neon connection used by `db:migrate:neon` |
+| `AUTH_SECRET` | Random string of at least 32 characters |
+| `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Google OAuth client |
+| `ADMIN_EMAIL` | Teacher email; enables the Google sign-in button on `/login` |
 
-To import the local `data/app.db` into a Neon branch that has no application data, run:
+The teacher email allowed to sign in is also set in `src/auth.ts`. If both `.env` and `.env.local` exist, remove blank values from `.env.local`, because it has higher priority. Restart the dev server after changing variables.
 
-```bash
-npm run db:migrate:sqlite
-```
+## Database
 
-The migration refuses to import over existing table data and records its version so it cannot be applied twice. Keep the local SQLite file as a backup until the Neon-backed application has been verified.
+Schema changes are versioned SQL files in `db/migrations/`. Run `npm run db:migrate:neon` to apply pending ones. Student accounts are created by the teacher with an email and a temporary password; leaving the password blank when editing keeps the current one.
 
-The student dashboard uses a one-time, clearly marked preview dataset. It includes grade-9 Merzlyak algebra for Dima, sample grade-7 algebra and geometry resources, and sample graded assignments for the grade-6 student account. Seed it once with `npm run db:seed:student-portal`; the version marker prevents deleted demo items or edited grades from being recreated on a later run. Add real textbook links from **Матеріали → Підручники й тренажери**.
-
-## Google Login and Drive Setup
-
-Google sign-in is restricted to the platform owner's email address.
+## Google login and Drive
 
 1. Create an OAuth 2.0 Web client in [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
-2. Add `http://localhost:3000` as an authorized JavaScript origin and `http://localhost:3000/api/auth/callback/google` as an authorized redirect URI. Add the production domain and callback URI before deployment.
-3. Enable the Google Drive API in the same Google Cloud project and add the `https://www.googleapis.com/auth/drive.file` scope under Google Auth Platform **Data Access**. On first submission, the app creates a folder for that student in the teacher's Drive and stores each upload there. It retains Drive file IDs and serves each submission only through its assigned homework.
-4. Set the Google client ID, client secret, a random `AUTH_SECRET` of at least 32 characters, and the exact Google account email allowed to access the teacher cabinet in `.env.local`. If you use `.env` instead, remove conflicting blank values from `.env.local`, because it has higher priority.
-5. Restart the development server after changing environment variables. After adding the Drive scope, sign out and sign in with Google again to grant Drive access and issue a refresh token.
+2. Add `http://localhost:3000` as an authorized JavaScript origin and `http://localhost:3000/api/auth/callback/google` as a redirect URI. Add the production domain and callback before deployment.
+3. Enable the Google Drive API and add the `https://www.googleapis.com/auth/drive.file` scope under Google Auth Platform **Data Access**.
+4. Set the variables above and restart the server.
+5. Sign in with Google once to grant Drive access and issue a refresh token. After a scope change, sign out and sign in again.
 
-Student accounts are created by the teacher with an email and temporary password. Editing an existing account leaves its password unchanged when the temporary-password field is blank.
+On the first submission the app creates a folder for the student in the teacher's Drive and stores uploads there.
 
-Never commit `.env.local` or send OAuth credentials through chat. The example file contains placeholders only.
+On Windows, if Auth.js logs `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, use `npm run dev:system-ca` instead of disabling TLS verification.
 
-On Windows, if Auth.js logs `UNABLE_TO_GET_ISSUER_CERT_LOCALLY` while Windows itself can reach Google, start the app with `npm.cmd run dev:system-ca`. This lets Node trust the system certificate store without disabling TLS verification.
+## Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The app can be deployed on Vercel. Add the environment variables above and the production OAuth redirect URI.

@@ -1,167 +1,111 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
+import { Button, List, Stack } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/EditOutlined";
+import VisibilityIcon from "@mui/icons-material/VisibilityOutlined";
+import { api, useApi } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
-import { Sidebar } from "../components/Sidebar";
+import { AppShell } from "@/components/AppShell";
+import { DeleteAction } from "@/components/DeleteAction";
+import { IconAction, ItemRow } from "@/components/ItemRow";
+import { PageSection } from "@/components/PageSection";
+import { toneAt } from "@/components/tones";
 import { router } from "../router";
-import { StudentForm } from "./StudentForm";
-import { StudentGroups } from "./StudentGroups";
+import { StudentDialog } from "./StudentDialog";
 import type { Student } from "./types";
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadStudents() {
-      try {
-        const response = await fetch(router.api.students);
-        const result = (await response.json()) as {
-          data?: Student[];
-          error?: string;
-        };
-        if (!response.ok)
-          throw new Error(result.error ?? errorMessages.students.loadFailed);
-        if (!cancelled) setStudents(result.data ?? []);
-      } catch {
-        if (!cancelled) setError(errorMessages.students.loadFailed);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    void loadStudents();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const refreshStudents = async () => {
-    const response = await fetch(router.api.students);
-    const result = (await response.json()) as {
-      data?: Student[];
-      error?: string;
-    };
-    if (!response.ok)
-      throw new Error(result.error ?? errorMessages.students.loadFailed);
-    setStudents(result.data ?? []);
-  };
-
-  const handleAdd = async (
-    name: string,
-    grade: number,
-    email: string,
-    temporaryPassword: string,
-  ) => {
-    setError(null);
-    try {
-      const response = await fetch(router.api.students, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, grade, email, temporaryPassword }),
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(result.error ?? errorMessages.students.addFailed);
-        return false;
-      }
-      await refreshStudents();
-      return true;
-    } catch {
-      setError(errorMessages.students.addFailed);
-      return false;
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    setError(null);
-    try {
-      const response = await fetch(`${router.api.students}?id=${id}`, {
-        method: "DELETE",
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(result.error ?? errorMessages.students.deleteFailed);
-        return;
-      }
-      await refreshStudents();
-    } catch {
-      setError(errorMessages.students.deleteFailed);
-    }
-  };
-
-  const handleEdit = async (
-    id: number,
-    name: string,
-    grade: number,
-    email: string,
-    temporaryPassword: string,
-  ) => {
-    setError(null);
-    try {
-      const response = await fetch(router.api.student(id), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, grade, email, temporaryPassword }),
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(result.error ?? errorMessages.students.saveFailed);
-        return false;
-      }
-      await refreshStudents();
-      return true;
-    } catch {
-      setError(errorMessages.students.saveFailed);
-      return false;
-    }
-  };
-
-  const classCount = new Set(students.map((student) => student.grade)).size;
-  const accountCount = students.filter((student) => student.email).length;
+  const { data, error, loading, reload } = useApi<Student[]>(
+    router.api.students,
+    errorMessages.students.loadFailed,
+  );
+  const [editing, setEditing] = useState<{ student?: Student } | null>(null);
+  const students = data ?? [];
+  const byGrade = Object.entries(Object.groupBy(students, (student) => student.grade)).sort(
+    ([first], [second]) => Number(first) - Number(second),
+  );
 
   return (
-    <main className="shell">
-      <Sidebar />
-      <section className="content" id="students">
-        <header className="student-roster-header">
-          <div className="student-roster-title">
-            <p className="eyebrow">КАБІНЕТ ВЧИТЕЛЯ</p>
-            <h1>Учні</h1>
-            <p>Навчальні групи та доступ до особистих кабінетів</p>
-          </div>
-          <dl className="student-roster-metrics" aria-label="Огляд учнів">
-            <div>
-              <dt>Учнів</dt>
-              <dd>{loading ? "—" : students.length}</dd>
-            </div>
-            <div>
-              <dt>Класів</dt>
-              <dd>{loading ? "—" : classCount}</dd>
-            </div>
-            <div>
-              <dt>Кабінетів</dt>
-              <dd>{loading ? "—" : accountCount}</dd>
-            </div>
-          </dl>
-        </header>
-
-        {error && (
-          <p className="materials-error" role="alert">
-            {error}
-          </p>
+    <AppShell
+      title="Учні"
+      subtitle="Навчальні групи та доступ до особистих кабінетів"
+      actions={
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing({})}>
+          Додати учня
+        </Button>
+      }
+    >
+      <Stack spacing={2}>
+        {(loading || error || students.length === 0) && (
+          <PageSection
+            title="Усі учні"
+            loading={loading}
+            error={error}
+            empty
+            emptyText="Поки немає жодного учня"
+          />
         )}
-        <StudentForm onAdd={handleAdd} />
-        <StudentGroups
-          students={students}
-          loading={loading}
-          onDelete={handleDelete}
-          onEdit={handleEdit}
+        {byGrade.map(([grade, items], index) => (
+          <PageSection
+            key={grade}
+            title={`${grade} клас`}
+            subtitle={`${items?.length} учн.`}
+            icon={grade}
+            tone={toneAt(index)}
+          >
+            <List disablePadding>
+              {items?.map((student) => (
+                <ItemRow
+                  key={student.id}
+                  tone={toneAt(student.id)}
+                  icon={student.name.charAt(0).toUpperCase()}
+                  primary={student.name}
+                  secondary={student.email ?? "без входу"}
+                  actions={
+                    <Stack direction="row">
+                      <IconAction
+                        label="Кабінет учня"
+                        component={Link}
+                        href={router.studentView(student.id)}
+                      >
+                        <VisibilityIcon />
+                      </IconAction>
+                      <IconAction
+                        label="Редагувати"
+                        color="warning"
+                        onClick={() => setEditing({ student })}
+                      >
+                        <EditIcon />
+                      </IconAction>
+                      <DeleteAction
+                        label={`Видалити: ${student.name}`}
+                        message={`${student.name} (${student.grade} клас) буде видалено.`}
+                        onConfirm={async () => {
+                          await api(router.api.student(student.id), {
+                            method: "DELETE",
+                            fallback: errorMessages.students.deleteFailed,
+                          });
+                          await reload();
+                        }}
+                      />
+                    </Stack>
+                  }
+                />
+              ))}
+            </List>
+          </PageSection>
+        ))}
+      </Stack>
+      {editing && (
+        <StudentDialog
+          student={editing.student}
+          onSaved={reload}
+          onClose={() => setEditing(null)}
         />
-      </section>
-    </main>
+      )}
+    </AppShell>
   );
 }

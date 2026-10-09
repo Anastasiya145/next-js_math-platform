@@ -21,12 +21,12 @@ Do not load both retained design skills by default. A substantial redesign may u
 Before searching, read the applicable repository instructions and the relevant parts of `PRODUCT.md` and `DESIGN.md`. The precedence order is:
 
 1. User request and product requirements
-2. `src/app/globals.css` for visual implementation values
+2. `src/components/Providers.tsx` (MUI theme) and `src/components/tones.ts` for visual implementation values
 3. `DESIGN.md` and `PRODUCT.md` for established direction and product intent
 4. File-scoped repository instructions
 5. Search results from this skill
 
-Do not run `--design-system`, `--persist`, design dials, or palette-generation searches for a focused UX question. Do not create a parallel design system; this repository's `DESIGN.md` and `src/app/globals.css` are authoritative. Search output is evidence for a targeted decision, not a replacement design authority.
+Do not run `--design-system`, `--persist`, design dials, or palette-generation searches for a focused UX question. Do not create a parallel design system; this repository's `DESIGN.md` and the MUI theme in `src/components/Providers.tsx` are authoritative. Search output is evidence for a targeted decision, not a replacement design authority.
 
 ## Rule Categories by Priority
 

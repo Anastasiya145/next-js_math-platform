@@ -8,27 +8,27 @@ export const errorMessages = {
   common: {
     accessDenied: "доступ заборонено",
     actionFailed: "Не вдалося виконати дію",
+    networkFailed: "Помилка підключення. Спробуйте ще раз.",
+    invalidUrl: "Вкажіть коректне посилання (http/https).",
     invalidId: "невірний id",
     resourceNotFound: "матеріал не знайдено",
     unknownAction: "невідома дія",
   },
   auth: {
-    accessDenied:
-      "Доступ заборонено. Цей сервіс призначений лише для адміністратора платформи.",
-    configuration:
-      "Вхід через Google не налаштований. Перевірте конфігурацію OAuth.",
+    accessDenied: "Доступ заборонено. Цей сервіс призначений лише для адміністратора платформи.",
+    configuration: "Вхід через Google не налаштований. Перевірте конфігурацію OAuth.",
     googleSetup:
       "Google-вхід ще не налаштовано. Перевірте локальну конфігурацію за інструкцією в README.",
     loginFailed: "Не вдалося увійти.",
     oauthCallback: "Google не завершив вхід. Спробуйте ще раз.",
     oauthSignin: "Не вдалося розпочати вхід через Google. Спробуйте ще раз.",
     credentialsSignin: "Неправильний email або пароль.",
+    passwordChangeFailed: "Не вдалося змінити пароль.",
   },
   database: {
     urlMissing: "DATABASE_URL is not configured",
     studentCreateFailed: "Could not create student account",
-    temporaryPasswordRequired:
-      "A temporary password is required for a new account",
+    temporaryPasswordRequired: "A temporary password is required for a new account",
     driveFolderSaveFailed: "Could not save student Drive folder",
     homeworkStudentRequired: "At least one student is required",
     homeworkStudentsMissing: "One or more students were not found",
@@ -51,23 +51,21 @@ export const errorMessages = {
     nameTooLong: "Ім'я має містити не більше 120 символів.",
     gradeRange: "Оберіть клас від 1 до 11.",
     emailRequired: "Вкажіть email.",
-    emailTooLong: (maximum: number) =>
-      `Email має містити не більше ${maximum} символів.`,
+    emailTooLong: (maximum: number) => `Email має містити не більше ${maximum} символів.`,
     emailInvalid: "Вкажіть коректну email-адресу.",
     passwordRequired: "Введіть пароль.",
-    passwordTooShort: (minimum: number) =>
-      `Пароль має містити щонайменше ${minimum} символів.`,
-    passwordTooLong: (maximum: number) =>
-      `Пароль має містити не більше ${maximum} символів.`,
+    passwordTooShort: (minimum: number) => `Пароль має містити щонайменше ${minimum} символів.`,
+    passwordTooLong: (maximum: number) => `Пароль має містити не більше ${maximum} символів.`,
     newAccountPasswordRequired: "Для нового облікового запису потрібен пароль.",
-    temporaryPasswordRequired:
-      "для нового email задайте тимчасовий пароль від 12 символів",
+    passwordsMismatch: "Паролі не співпадають.",
+    temporaryPasswordRequired: "для нового email задайте тимчасовий пароль від 12 символів",
     loginCredentialsInvalid: "Неправильний email або пароль.",
   },
   homework: {
     loadFailed: "Не вдалося завантажити домашні роботи",
     refreshFailed: "Не вдалося оновити домашні роботи",
     createFailed: "Не вдалося призначити домашню роботу",
+    deleteFailed: "Не вдалося видалити домашню роботу",
     gradeSaveFailed: "Не вдалося зберегти оцінку",
     uploadFailed: "Не вдалося надіслати роботу",
     noHomeworkSaveFailed: "Не вдалося зафіксувати відсутність ДЗ",
@@ -78,8 +76,7 @@ export const errorMessages = {
     fileNotFound: "файл не знайдено",
     studentNotFound: "учня не знайдено",
     studentNotAssigned: "учня не знайдено",
-    studentHasNotSubmitted:
-      "учень ще не надіслав роботу і не позначив її відсутньою",
+    studentHasNotSubmitted: "учень ще не надіслав роботу і не позначив її відсутньою",
     submissionLocked: "оцінену роботу вже не можна змінити",
     submissionLockedForEdit: "оцінена робота вже закрита для змін",
     submissionAlreadyGraded: "оцінена робота вже не приймає зміни",
@@ -90,26 +87,25 @@ export const errorMessages = {
   },
   drive: {
     reconnectRequired: "учитель має повторно підключити Google Drive",
-    connectRequired:
-      "підключіть Google Drive: вийдіть і повторно увійдіть через Google",
+    connectRequired: "підключіть Google Drive: вийдіть і повторно увійдіть через Google",
     downloadFailed: "не вдалося завантажити файл із Google Drive",
     createFolderFailed: "не вдалося створити папку учня в Google Drive",
     folderIdMissing: "Google Drive не повернув ID папки учня",
-    uploadRejected:
-      "Google Drive не прийняв файл. Перевірте доступ до Drive API.",
+    uploadRejected: "Google Drive не прийняв файл. Перевірте доступ до Drive API.",
     fileIdMissing: "Google Drive не повернув файл",
   },
   materials: {
     loadFailed: "Не вдалося завантажити матеріали",
     actionFailed: "Не вдалося виконати дію",
+    deleteFailed: "Не вдалося видалити",
     actionRequired: "не вказано дію",
     classNameRequired: "потрібно вказати назву класу",
     classNotFound: "клас не знайдено",
     invalidUrl: "неправильне посилання",
     topicTitleRequired: "потрібно вказати назву теми",
     topicNotFound: "тему не знайдено",
-    fileNameAndUrlRequired:
-      "потрібні назва файлу та коректне посилання (http/https)",
+    fileNotFound: "файл не знайдено",
+    fileNameAndUrlRequired: "потрібні назва файлу та коректне посилання (http/https)",
   },
   textbooks: {
     loadFailed: "Не вдалося завантажити підручники",

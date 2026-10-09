@@ -6,11 +6,12 @@ import {
   createNushTopic,
   getNushTopicMaterials,
   addNushTopicMaterial,
+  deleteNushTopic,
   deleteNushTopicMaterial,
 } from "@/lib/db";
 
 type PostBody = {
-  action?: "list" | "create-topic" | "add-material" | "delete-material";
+  action?: "list" | "create-topic" | "add-material" | "delete-material" | "delete-topic";
   grade?: number;
   topicId?: number;
   title?: string;
@@ -137,6 +138,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     } catch {
       return NextResponse.json({ error: "Failed to delete material" }, { status: 500 });
+    }
+  }
+
+  if (body.action === "delete-topic") {
+    if (!body.topicId) {
+      return NextResponse.json({ error: errorMessages.materials.topicNotFound }, { status: 400 });
+    }
+
+    try {
+      await deleteNushTopic(body.topicId);
+      return NextResponse.json({ success: true });
+    } catch {
+      return NextResponse.json({ error: errorMessages.materials.deleteFailed }, { status: 500 });
     }
   }
 

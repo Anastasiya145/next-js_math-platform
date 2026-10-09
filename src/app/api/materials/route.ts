@@ -86,38 +86,37 @@ const isValidHttpUrl = (value: string) => {
 
 export async function GET() {
   if (!(await getTeacherUser())) {
-    return NextResponse.json(
-      { error: errorMessages.common.accessDenied },
-      { status: 403 },
-    );
+    return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
   }
   return NextResponse.json({ data: classes });
 }
 
 type PostBody = {
-  action?: "add-class" | "add-topic" | "add-file" | "set-drive-folder";
+  action?:
+    | "add-class"
+    | "add-topic"
+    | "add-file"
+    | "set-drive-folder"
+    | "delete-class"
+    | "delete-topic"
+    | "delete-file";
   classId?: string;
   className?: string;
   topicId?: string;
   topicTitle?: string;
+  fileId?: string;
   driveFolderUrl?: string;
   file?: { name?: string; url?: string; type?: FileType };
 };
 
 export async function POST(request: Request) {
   if (!(await getTeacherUser())) {
-    return NextResponse.json(
-      { error: errorMessages.common.accessDenied },
-      { status: 403 },
-    );
+    return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
   }
   const body = (await request.json().catch(() => null)) as PostBody | null;
 
   if (!body?.action) {
-    return NextResponse.json(
-      { error: errorMessages.materials.actionRequired },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: errorMessages.materials.actionRequired }, { status: 400 });
   }
 
   if (body.action === "add-class") {
@@ -140,19 +139,18 @@ export async function POST(request: Request) {
 
   const klass = classes.find((c) => c.id === body.classId);
   if (!klass) {
-    return NextResponse.json(
-      { error: errorMessages.materials.classNotFound },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: errorMessages.materials.classNotFound }, { status: 404 });
+  }
+
+  if (body.action === "delete-class") {
+    classes.splice(classes.indexOf(klass), 1);
+    return NextResponse.json({ data: { id: klass.id } });
   }
 
   if (body.action === "set-drive-folder") {
     const url = body.driveFolderUrl?.trim() ?? "";
     if (url && !isValidHttpUrl(url)) {
-      return NextResponse.json(
-        { error: errorMessages.materials.invalidUrl },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: errorMessages.materials.invalidUrl }, { status: 400 });
     }
     klass.driveFolderUrl = url;
     return NextResponse.json({ data: klass });
@@ -174,10 +172,7 @@ export async function POST(request: Request) {
   if (body.action === "add-file") {
     const topic = klass.topics.find((t) => t.id === body.topicId);
     if (!topic) {
-      return NextResponse.json(
-        { error: errorMessages.materials.topicNotFound },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: errorMessages.materials.topicNotFound }, { status: 404 });
     }
     const name = body.file?.name?.trim();
     const url = body.file?.url?.trim();
@@ -188,8 +183,7 @@ export async function POST(request: Request) {
       );
     }
     const type: FileType =
-      body.file?.type &&
-      ["pdf", "doc", "image", "link", "other"].includes(body.file.type)
+      body.file?.type && ["pdf", "doc", "image", "link", "other"].includes(body.file.type)
         ? body.file.type
         : "link";
     const file: MaterialFile = {
@@ -203,8 +197,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: file }, { status: 201 });
   }
 
-  return NextResponse.json(
-    { error: errorMessages.common.unknownAction },
-    { status: 400 },
-  );
+  if (body.action === "delete-topic") {
+    const topicIndex = klass.topics.findIndex((t) => t.id === body.topicId);
+    if (topicIndex < 0) {
+      return NextResponse.json({ error: errorMessages.materials.topicNotFound }, { status: 404 });
+    }
+    klass.topics.splice(topicIndex, 1);
+    return NextResponse.json({ data: { id: body.topicId } });
+  }
+
+  if (body.action === "delete-file") {
+    const topic = klass.topics.find((t) => t.id === body.topicId);
+    const fileIndex = topic?.files.findIndex((f) => f.id === body.fileId) ?? -1;
+    if (!topic || fileIndex < 0) {
+      return NextResponse.json({ error: errorMessages.materials.fileNotFound }, { status: 404 });
+    }
+    topic.files.splice(fileIndex, 1);
+    return NextResponse.json({ data: { id: body.fileId } });
+  }
+
+  return NextResponse.json({ error: errorMessages.common.unknownAction }, { status: 400 });
 }

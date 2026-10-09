@@ -30,4 +30,4 @@ A mathematics tutoring workspace with separate teacher and student experiences. 
 
 ## Storage and scope notes
 
-The current implementation uses Neon Postgres for application data and the teacher's Google Drive for homework files. The local SQLite database is retained as the source backup for the guarded one-time import. Auth.js remains the identity provider; Neon stores student account hashes and application records. Student-portal sample resources/homework are marked with `is_demo` and a migration marker; the Dima grade-9 textbook URL is real user-provided data. Verify routes and API handlers before treating navigation labels or old sample dashboard figures as implemented product behavior.
+Neon Postgres stores application data and the teacher's Google Drive stores homework files. Auth.js remains the identity provider; Neon stores student account hashes and application records. Class folders and topics under Materials are kept in memory by `/api/materials` and are not persisted yet. Verify routes and API handlers before treating navigation labels or static dashboard figures as implemented product behavior.
