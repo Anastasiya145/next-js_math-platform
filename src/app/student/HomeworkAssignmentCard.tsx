@@ -3,14 +3,12 @@
 import { useState } from "react";
 import {
   Alert,
-  Box,
   Button,
   Card,
   CardActions,
   CardContent,
   CardHeader,
   Chip,
-  Link as MuiLink,
   Stack,
   Typography,
 } from "@mui/material";
@@ -18,7 +16,7 @@ import AttachFileIcon from "@mui/icons-material/AttachFile";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { api, useAction } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
-import { formatDateTime, formatDay } from "@/lib/format";
+import { formatDateTime, formatLesson } from "@/lib/format";
 import { shade, tint, type Tone } from "@/components/tones";
 import { router } from "../router";
 import type { StudentHomeworkItem } from "./types";
@@ -101,7 +99,7 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
           {homework.nextLessonAt && (
             <Typography variant="body2" color="text.secondary">
               {submission.gradedAt ? "Урок був" : "Наступний урок"}:{" "}
-              {formatDay(homework.nextLessonAt)}
+              {formatLesson(homework.nextLessonAt)}
             </Typography>
           )}
           {homework.instructions && <Typography>{homework.instructions}</Typography>}
@@ -119,6 +117,7 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
           {submission.status === "submitted" && (
             <Alert severity="info" sx={{ width: "100%" }}>
               {submission.fileName ? `Надіслано: ${submission.fileName}` : "Роботу надіслано"}
+              {!submission.gradedAt && " · чекає перевірки"}
             </Alert>
           )}
           {submission.status === "no_homework" && (
@@ -138,7 +137,7 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
           )}
         </Stack>
       </CardContent>
-      {!readOnly && !submission.gradedAt && (
+      {!readOnly && !submission.status && (
         <CardActions sx={{ px: 2, pb: 2, flexWrap: "wrap", gap: 1 }}>
           <Button
             component="label"
@@ -158,16 +157,12 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
           <Button variant="contained" disabled={!file || busy} onClick={upload}>
             Надіслати роботу
           </Button>
-          <Box sx={{ flexGrow: 1 }} />
-          <MuiLink
-            component="button"
-            type="button"
-            underline="hover"
-            disabled={busy}
-            onClick={noHomework}
-          >
+          <Typography variant="body2" color="text.secondary">
+            або
+          </Typography>
+          <Button variant="outlined" color="warning" disabled={busy} onClick={noHomework}>
             Немає ДЗ · 0 балів
-          </MuiLink>
+          </Button>
         </CardActions>
       )}
     </Card>

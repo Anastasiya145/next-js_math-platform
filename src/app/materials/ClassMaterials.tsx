@@ -32,13 +32,13 @@ import { router } from "../router";
 
 type FileType = "pdf" | "doc" | "image" | "link" | "other";
 type ClassFolder = {
-  id: string;
+  id: number;
   className: string;
-  driveFolderUrl?: string;
+  driveFolderUrl: string;
   topics: {
-    id: string;
+    id: number;
     title: string;
-    files: { id: string; name: string; url: string; type: FileType; addedAt: string }[];
+    files: { id: number; name: string; url: string; type: FileType; addedAt: string }[];
   }[];
 };
 
@@ -56,7 +56,7 @@ export function ClassMaterials() {
     errorMessages.materials.loadFailed,
   );
   const fileRemoval = useAction();
-  const [classId, setClassId] = useState<string | null>(null);
+  const [classId, setClassId] = useState<number | null>(null);
   const classes = data ?? [];
   const current = classes.find((item) => item.id === classId) ?? classes[0];
 
@@ -93,7 +93,7 @@ export function ClassMaterials() {
     >
       <Tabs
         value={current?.id ?? false}
-        onChange={(_, value: string) => setClassId(value)}
+        onChange={(_, value: number) => setClassId(value)}
         variant="scrollable"
         sx={{ mb: 2 }}
       >

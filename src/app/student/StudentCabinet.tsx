@@ -10,7 +10,7 @@ import MenuBookIcon from "@mui/icons-material/MenuBookOutlined";
 import StarIcon from "@mui/icons-material/StarOutlineRounded";
 import { useApi } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
-import { formatDay } from "@/lib/format";
+import { lessonParts } from "@/lib/format";
 import { AppShell } from "@/components/AppShell";
 import { PageSection } from "@/components/PageSection";
 import { ProgressChart } from "@/components/ProgressChart";
@@ -36,15 +36,16 @@ export function StudentCabinet({ studentId }: Props) {
   const teacherView = Boolean(studentId);
 
   const homeworks = data?.homeworks ?? [];
-  const active = homeworks.filter((homework) => !homework.submission.gradedAt);
+  const active = homeworks.filter((homework) => !homework.submission.status);
+  const activityAt = (homework: StudentHomeworkItem) =>
+    homework.submission.gradedAt ?? homework.submission.submittedAt ?? "";
   const completed = homeworks
-    .filter((homework) => homework.submission.gradedAt)
-    .sort((first, second) =>
-      (second.submission.gradedAt ?? "").localeCompare(first.submission.gradedAt ?? ""),
-    );
-  const nextLesson = active
-    .filter((homework) => homework.nextLessonAt)
+    .filter((homework) => homework.submission.status)
+    .sort((first, second) => activityAt(second).localeCompare(activityAt(first)));
+  const nextLesson = homeworks
+    .filter((homework) => homework.nextLessonAt && !homework.submission.gradedAt)
     .sort((first, second) => first.nextLessonAt!.localeCompare(second.nextLessonAt!))[0];
+  const lesson = nextLesson ? lessonParts(nextLesson.nextLessonAt!) : null;
 
   const homeworkSection = (
     title: string,
@@ -120,8 +121,8 @@ export function StudentCabinet({ studentId }: Props) {
             <Grid size={{ xs: 12, md: 4 }}>
               <StatCard
                 label="Наступний урок"
-                value={nextLesson ? formatDay(nextLesson.nextLessonAt!) : "—"}
-                hint={nextLesson?.title}
+                value={lesson ? `${lesson.date}, ${lesson.time}` : "—"}
+                hint={lesson ? `${lesson.weekday} · ${nextLesson?.title}` : undefined}
                 icon={<EventIcon />}
                 tone="info"
               />
@@ -148,7 +149,7 @@ export function StudentCabinet({ studentId }: Props) {
           {homeworkSection(
             "Завершені роботи",
             completed,
-            "Після перевірки домашні роботи з'являться тут.",
+            "Надіслані й перевірені роботи з'являться тут.",
             <AssignmentTurnedInIcon />,
             "success",
           )}

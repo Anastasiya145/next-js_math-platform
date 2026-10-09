@@ -74,13 +74,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.googleAccessTokenExpiresAt = account.expires_at
           ? account.expires_at * 1000
           : undefined;
-        
+
         // Save teacher's Google tokens to database for student access
-        if (user?.role === "teacher" && user.email && account.access_token && account.refresh_token) {
+        // The Google profile has no `role`; signIn() already limits Google to the teacher.
+        const teacherEmail = user?.email ?? token.email;
+        if (
+          token.role === "teacher" &&
+          teacherEmail &&
+          account.access_token &&
+          account.refresh_token
+        ) {
           const { saveTeacherGoogleToken } = await import("@/lib/db");
           try {
             await saveTeacherGoogleToken({
-              email: user.email,
+              email: teacherEmail,
               accessToken: account.access_token,
               refreshToken: account.refresh_token,
               expiresAt: account.expires_at ? account.expires_at * 1000 : Date.now() + 3600000,

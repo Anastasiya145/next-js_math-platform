@@ -10,6 +10,7 @@ export const router = {
     students: "/api/students",
     student: (studentId: number) => `/api/students?id=${studentId}`,
     studentTextbooks: (studentId: number) => `/api/students/${studentId}/textbooks`,
+    studentDriveFolder: (studentId: number) => `/api/students/${studentId}/drive-folder`,
     materials: "/api/materials",
     nush: "/api/nush",
     textbooks: "/api/textbooks",
@@ -20,6 +21,8 @@ export const router = {
     homeworkNoHomework: (homeworkId: number) => `/api/assignments/${homeworkId}/no-homework`,
     homeworkGrade: (homeworkId: number) => `/api/assignments/${homeworkId}/grade`,
     studentDashboard: "/api/student/dashboard",
+    driveStatus: "/api/teacher/drive-status",
+    drivePicker: "/api/teacher/drive-picker",
     changePassword: "/api/student/change-password",
   },
 } as const;

@@ -8,7 +8,7 @@ import { FormDialog } from "./FormDialog";
 export type FieldSpec = {
   name: string;
   label: string;
-  type?: "text" | "url" | "date" | "select" | "multiline";
+  type?: "text" | "url" | "date" | "datetime-local" | "select" | "multiline";
   options?: Array<[value: string, label: string]>;
   defaultValue?: string;
   optional?: boolean;
@@ -79,7 +79,11 @@ export function FieldsDialog({
             select={field.type === "select"}
             multiline={field.type === "multiline"}
             minRows={field.type === "multiline" ? 3 : undefined}
-            type={field.type === "url" || field.type === "date" ? field.type : undefined}
+            type={
+              field.type === "url" || field.type === "date" || field.type === "datetime-local"
+                ? field.type
+                : undefined
+            }
             value={values[field.name]}
             onChange={(event) => setValues({ ...values, [field.name]: event.target.value })}
             onBlur={() => setTouched({ ...touched, [field.name]: true })}
@@ -87,7 +91,10 @@ export function FieldsDialog({
             helperText={error}
             slotProps={{
               htmlInput: { maxLength: field.maxLength },
-              inputLabel: field.type === "date" ? { shrink: true } : undefined,
+              inputLabel:
+                field.type === "date" || field.type === "datetime-local"
+                  ? { shrink: true }
+                  : undefined,
             }}
           >
             {field.options?.map(([value, label]) => (

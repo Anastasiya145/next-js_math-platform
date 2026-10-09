@@ -23,7 +23,7 @@ export function HomeworkForm({ students, onCreated, onClose }: Props) {
       submitLabel="Призначити"
       fields={[
         { name: "title", label: "Назва", maxLength: 160 },
-        { name: "nextLessonAt", label: "Дата наступного уроку", type: "date" },
+        { name: "nextLessonAt", label: "Дата й час наступного уроку", type: "datetime-local" },
         { name: "resourceUrl", label: "Посилання на матеріал", type: "url", optional: true },
         { name: "instructions", label: "Інструкція", type: "multiline", optional: true },
       ]}
@@ -44,7 +44,12 @@ export function HomeworkForm({ students, onCreated, onClose }: Props) {
       onClose={onClose}
       onSubmit={async (values) => {
         await api(router.api.assignments, {
-          body: { ...values, dueAt: null, studentIds: selected.map((student) => student.id) },
+          body: {
+            ...values,
+            nextLessonAt: new Date(values.nextLessonAt).toISOString(),
+            dueAt: null,
+            studentIds: selected.map((student) => student.id),
+          },
           fallback: errorMessages.homework.createFailed,
         });
         await onCreated();

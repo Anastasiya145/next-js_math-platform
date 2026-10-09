@@ -5,9 +5,7 @@ type RefreshedToken = {
   expires_in?: number;
 };
 
-export async function getGoogleDriveAccessToken(
-  request: Request,
-): Promise<string | null> {
+export async function getGoogleDriveAccessToken(request: Request): Promise<string | null> {
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
@@ -15,10 +13,7 @@ export async function getGoogleDriveAccessToken(
   if (token?.role !== "teacher") return null;
 
   const expiresAt = Number(token.googleAccessTokenExpiresAt ?? 0);
-  if (
-    typeof token.googleAccessToken === "string" &&
-    expiresAt > Date.now() + 60_000
-  ) {
+  if (typeof token.googleAccessToken === "string" && expiresAt > Date.now() + 60_000) {
     return token.googleAccessToken;
   }
 
@@ -46,7 +41,7 @@ export async function getGoogleDriveAccessToken(
 export async function getTeacherGoogleDriveAccessToken(
   teacherEmail: string,
 ): Promise<string | null> {
-  const { getTeacherGoogleToken } = await import("@/lib/db");
+  const { getTeacherGoogleToken, saveTeacherGoogleToken } = await import("@/lib/db");
   const storedToken = await getTeacherGoogleToken(teacherEmail);
   if (!storedToken) return null;
 
@@ -72,5 +67,13 @@ export async function getTeacherGoogleDriveAccessToken(
   if (!response.ok) return null;
 
   const refreshed = (await response.json()) as RefreshedToken;
-  return refreshed.access_token ?? null;
+  if (!refreshed.access_token) return null;
+
+  await saveTeacherGoogleToken({
+    email: teacherEmail,
+    accessToken: refreshed.access_token,
+    refreshToken: storedToken.refreshToken,
+    expiresAt: Date.now() + (refreshed.expires_in ?? 3600) * 1000,
+  });
+  return refreshed.access_token;
 }

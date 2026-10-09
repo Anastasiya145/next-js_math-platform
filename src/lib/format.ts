@@ -5,13 +5,29 @@ export const formatDateTime = (value: string | null) =>
       )
     : "Без терміну";
 
-// Calendar dates arrive as "YYYY-MM-DD" and must not shift with the local time zone.
-export const formatDay = (value: string, withWeekday = false) =>
-  new Intl.DateTimeFormat("uk-UA", {
-    ...(withWeekday ? { weekday: "long" } : {}),
+// Lessons are shown in Kyiv time so server and browser render the same text.
+export const lessonParts = (value: string) => {
+  const parts = new Intl.DateTimeFormat("uk-UA", {
+    timeZone: "Europe/Kyiv",
+    weekday: "long",
     day: "numeric",
     month: "long",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00.000Z`));
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(value));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return {
+    weekday: get("weekday"),
+    date: `${get("day")} ${get("month")}`,
+    time: `${get("hour")}:${get("minute")}`,
+  };
+};
+
+export const formatLesson = (value: string) => {
+  const { weekday, date, time } = lessonParts(value);
+  return `${weekday}, ${date}, ${time}`;
+};
 
 export const GRADES = Array.from({ length: 11 }, (_, index) => index + 1);

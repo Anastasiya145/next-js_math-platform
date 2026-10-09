@@ -4,4 +4,5 @@ export type Student = {
   grade: number;
   created_at: string;
   email: string | null;
+  hasDriveFolder?: boolean;
 };

@@ -17,7 +17,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { api } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
-import { formatDateTime, formatDay } from "@/lib/format";
+import { formatDateTime, formatLesson } from "@/lib/format";
 import { ActionRow } from "@/components/ActionRow";
 import { DeleteAction } from "@/components/DeleteAction";
 import { shade, tint } from "@/components/tones";
@@ -27,8 +27,12 @@ import type { TeacherHomework } from "./types";
 
 type Props = { homework: TeacherHomework; onChanged: () => Promise<void> };
 
+// Works the student sent (or marked "no homework") that the teacher has not graded yet.
+export const pendingReviewCount = (homework: TeacherHomework) =>
+  homework.students.filter((student) => student.status && !student.gradedAt).length;
+
 export function HomeworkCard({ homework, onChanged }: Props) {
-  const pending = homework.students.filter((student) => student.status && !student.gradedAt).length;
+  const pending = pendingReviewCount(homework);
   const tone = pending ? "warning" : "success";
 
   return (
@@ -59,7 +63,7 @@ export function HomeworkCard({ homework, onChanged }: Props) {
             <Typography sx={{ fontWeight: 600 }}>{homework.title}</Typography>
             <Typography variant="body2" color="text.secondary">
               {homework.nextLessonAt
-                ? `Наступний урок: ${formatDay(homework.nextLessonAt)} · `
+                ? `Наступний урок: ${formatLesson(homework.nextLessonAt)} · `
                 : ""}
               {formatDateTime(homework.dueAt)}
             </Typography>

@@ -28,6 +28,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import PeopleIcon from "@mui/icons-material/PeopleOutlined";
 import { navItems, router } from "@/app/router";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
+import { DriveStatusAlert } from "./DriveStatusAlert";
 import { glass, glow, gradientOf, shade, tint, type Tone } from "./tones";
 
 const DRAWER_WIDTH = 256;
@@ -222,52 +223,71 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
             spacing={2}
             sx={{
               mb: 3,
-              p: { xs: 2.5, md: 3.5 },
-              position: "relative",
-              overflow: "hidden",
-              borderRadius: "24px",
-              color: white,
-              background: HERO_GRADIENT,
-              boxShadow: glow("primary", 75),
               alignItems: { sm: "center" },
               justifyContent: "space-between",
-              "&::before, &::after": { content: '""', position: "absolute", borderRadius: "50%" },
-              "&::before": {
-                width: 280,
-                height: 280,
-                top: -130,
-                right: -60,
-                background: glass(14),
-              },
-              "&::after": {
-                width: 160,
-                height: 160,
-                bottom: -90,
-                right: 190,
-                background: glass(10),
-              },
-              "& > *": { position: "relative" },
-              "& .MuiButton-contained, & .MuiButton-contained:hover": {
-                color: shade("primary"),
-                background: white,
-                boxShadow: "none",
-                filter: "none",
-              },
-              "& .MuiButton-contained.Mui-disabled": { color: glass(75), background: glass(28) },
-              "& .MuiButton-text, & .MuiButton-outlined": {
-                color: "inherit",
-                borderColor: glass(55),
-              },
+              ...(isStudent
+                ? { py: 1 }
+                : {
+                    p: { xs: 2.5, md: 3.5 },
+                    position: "relative",
+                    overflow: "hidden",
+                    borderRadius: "24px",
+                    color: white,
+                    background: HERO_GRADIENT,
+                    boxShadow: glow("primary", 75),
+                    "&::before, &::after": {
+                      content: '""',
+                      position: "absolute",
+                      borderRadius: "50%",
+                    },
+                    "&::before": {
+                      width: 280,
+                      height: 280,
+                      top: -130,
+                      right: -60,
+                      background: glass(14),
+                    },
+                    "&::after": {
+                      width: 160,
+                      height: 160,
+                      bottom: -90,
+                      right: 190,
+                      background: glass(10),
+                    },
+                    "& > *": { position: "relative" },
+                    "& .MuiButton-contained, & .MuiButton-contained:hover": {
+                      color: shade("primary"),
+                      background: white,
+                      boxShadow: "none",
+                      filter: "none",
+                    },
+                    "& .MuiButton-contained.Mui-disabled": {
+                      color: glass(75),
+                      background: glass(28),
+                    },
+                    "& .MuiButton-text, & .MuiButton-outlined": {
+                      color: "inherit",
+                      borderColor: glass(55),
+                    },
+                  }),
             }}
           >
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="h4" component="h1">
                 {title}
               </Typography>
-              {subtitle && <Typography sx={{ mt: 0.5, opacity: 0.9 }}>{subtitle}</Typography>}
+              {subtitle && (
+                <Typography
+                  sx={{ mt: 0.5, opacity: isStudent ? 1 : 0.9 }}
+                  color={isStudent ? "text.secondary" : "inherit"}
+                >
+                  {subtitle}
+                </Typography>
+              )}
             </Box>
             {actions}
           </Stack>
+          {session?.user.role === "teacher" && <DriveStatusAlert />}
           {children}
         </Container>
       </Box>

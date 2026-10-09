@@ -9,32 +9,23 @@ export async function POST(
 ) {
   const student = await getStudentUser();
   if (!student) {
-    return NextResponse.json(
-      { error: errorMessages.common.accessDenied },
-      { status: 403 },
-    );
+    return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
   }
 
   const homeworkId = Number((await context.params).homeworkId);
   if (!Number.isInteger(homeworkId) || homeworkId < 1) {
-    return NextResponse.json(
-      { error: errorMessages.homework.assignmentNotFound },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: errorMessages.homework.assignmentNotFound }, { status: 404 });
   }
   const homeworks = await listHomeworkForStudent(student.studentId);
   const homework = homeworks.find((item) => item.id === homeworkId);
   if (!homework) {
-    return NextResponse.json(
-      { error: errorMessages.homework.assignmentNotFound },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: errorMessages.homework.assignmentNotFound }, { status: 404 });
   }
   if (homework.submission.gradedAt) {
-    return NextResponse.json(
-      { error: errorMessages.homework.submissionLocked },
-      { status: 409 },
-    );
+    return NextResponse.json({ error: errorMessages.homework.submissionLocked }, { status: 409 });
+  }
+  if (homework.submission.status === "submitted") {
+    return NextResponse.json({ error: errorMessages.homework.alreadySubmitted }, { status: 409 });
   }
 
   const saved = await saveHomeworkSubmission({

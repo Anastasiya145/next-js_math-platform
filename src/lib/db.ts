@@ -37,6 +37,7 @@ function mapStudentWithEmail(row: DatabaseRow): StudentWithEmail {
   return {
     ...mapStudent(row),
     email: typeof row.email === "string" ? row.email : null,
+    hasDriveFolder: row.has_drive_folder === true,
   };
 }
 
@@ -53,7 +54,7 @@ export type StudentAccount = Student & {
   password_hash: string;
 };
 
-export type StudentWithEmail = Student & { email: string | null };
+export type StudentWithEmail = Student & { email: string | null; hasDriveFolder?: boolean };
 
 export type HomeworkSubmission = {
   status: "submitted" | "no_homework" | null;
@@ -230,8 +231,11 @@ export async function findStudentAccount(email: string): Promise<StudentAccount 
 
 export async function listStudentsWithEmail(): Promise<StudentWithEmail[]> {
   const rows = (await getDb()`
-    SELECT s.id, s.name, s.grade, s.created_at, a.email
-    FROM students s LEFT JOIN student_accounts a ON a.student_id = s.id
+    SELECT s.id, s.name, s.grade, s.created_at, a.email,
+           f.drive_folder_id IS NOT NULL AS has_drive_folder
+    FROM students s
+    LEFT JOIN student_accounts a ON a.student_id = s.id
+    LEFT JOIN student_drive_folders f ON f.student_id = s.id
     ORDER BY s.grade ASC, s.id ASC
   `) as DatabaseRow[];
   return rows.map(mapStudentWithEmail);
@@ -327,6 +331,26 @@ export async function setStudentDriveFolderId(
   return existing;
 }
 
+// Returns false when the folder is already linked to another student (UNIQUE constraint).
+export async function replaceStudentDriveFolderId(
+  studentId: number,
+  driveFolderId: string,
+): Promise<boolean> {
+  const sql = getDb();
+  const taken = (await sql`
+    SELECT 1 FROM student_drive_folders
+    WHERE drive_folder_id = ${driveFolderId} AND student_id <> ${studentId}
+  `) as DatabaseRow[];
+  if (taken.length > 0) return false;
+
+  await sql`
+    INSERT INTO student_drive_folders (student_id, drive_folder_id)
+    VALUES (${studentId}, ${driveFolderId})
+    ON CONFLICT (student_id) DO UPDATE SET drive_folder_id = EXCLUDED.drive_folder_id
+  `;
+  return true;
+}
+
 export async function isHomeworkAssignedToStudent(
   homeworkId: number,
   studentId: number,
@@ -376,7 +400,7 @@ export async function createHomework(input: {
     ), new_homework AS (
       INSERT INTO homeworks
         (title, instructions, resource_url, due_at, next_lesson_at, created_by)
-      SELECT $1, $2, $3, $4, $5, $6
+      SELECT $1, $2, $3, $4, $5::timestamptz, $6
       WHERE (SELECT COUNT(*) FROM valid_students) = ${studentIds.length}
       RETURNING id
     ), assignments AS (
@@ -427,7 +451,7 @@ export async function listHomeworkForTeacher(): Promise<HomeworkForTeacher[]> {
         instructions: String(row.instructions ?? ""),
         resourceUrl: String(row.resourceUrl ?? ""),
         dueAt: row.dueAt ? String(row.dueAt) : null,
-        nextLessonAt: toDate(row.nextLessonAt),
+        nextLessonAt: toTimestamp(row.nextLessonAt),
         createdAt: toTimestamp(row.createdAt) ?? "",
         isDemo: Boolean(row.isDemo),
         students: [],
@@ -470,7 +494,7 @@ export async function listHomeworkForStudent(studentId: number): Promise<Student
     instructions: String(row.instructions ?? ""),
     resourceUrl: String(row.resourceUrl ?? ""),
     dueAt: toTimestamp(row.dueAt),
-    nextLessonAt: toDate(row.nextLessonAt),
+    nextLessonAt: toTimestamp(row.nextLessonAt),
     createdAt: toTimestamp(row.createdAt) ?? "",
     isDemo: Boolean(row.isDemo),
     submission: {
@@ -656,6 +680,131 @@ export async function deleteNushTopicMaterial(materialId: number): Promise<void>
 
 export async function deleteNushTopic(topicId: number): Promise<void> {
   await getDb()`DELETE FROM nush_topics WHERE id = ${topicId}`;
+}
+
+// Class materials (classes -> topics -> files)
+
+export type MaterialFileType = "pdf" | "doc" | "image" | "link" | "other";
+
+export type MaterialFile = {
+  id: number;
+  name: string;
+  url: string;
+  type: MaterialFileType;
+  addedAt: string;
+};
+
+export type MaterialClass = {
+  id: number;
+  className: string;
+  driveFolderUrl: string;
+  topics: Array<{ id: number; title: string; files: MaterialFile[] }>;
+};
+
+export async function listMaterialClasses(): Promise<MaterialClass[]> {
+  const sql = getDb();
+  const [classes, topics, files] = (await Promise.all([
+    sql`SELECT id, name, drive_folder_url FROM material_classes ORDER BY grade ASC, name ASC, id ASC`,
+    sql`SELECT id, class_id, title FROM material_topics ORDER BY created_at ASC, id ASC`,
+    sql`SELECT id, topic_id, name, url, file_type, created_at FROM material_files ORDER BY created_at ASC, id ASC`,
+  ])) as DatabaseRow[][];
+
+  const filesByTopic = Object.groupBy(files, (row) => Number(row.topic_id));
+  const topicsByClass = Object.groupBy(topics, (row) => Number(row.class_id));
+  return classes.map((row) => ({
+    id: Number(row.id),
+    className: String(row.name),
+    driveFolderUrl: String(row.drive_folder_url ?? ""),
+    topics: (topicsByClass[Number(row.id)] ?? []).map((topic) => ({
+      id: Number(topic.id),
+      title: String(topic.title),
+      files: (filesByTopic[Number(topic.id)] ?? []).map((file) => ({
+        id: Number(file.id),
+        name: String(file.name),
+        url: String(file.url),
+        type: file.file_type as MaterialFileType,
+        addedAt: toDate(file.created_at) ?? "",
+      })),
+    })),
+  }));
+}
+
+export async function createMaterialClass(input: {
+  name: string;
+  grade: number;
+  createdBy: string;
+}): Promise<number> {
+  const rows = (await getDb()`
+    INSERT INTO material_classes (name, grade, created_by)
+    VALUES (${input.name}, ${input.grade}, ${input.createdBy})
+    RETURNING id
+  `) as DatabaseRow[];
+  return Number(rows[0]?.id);
+}
+
+export async function deleteMaterialClass(classId: number): Promise<boolean> {
+  const rows = (await getDb()`
+    DELETE FROM material_classes WHERE id = ${classId} RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function setMaterialClassDriveFolder(
+  classId: number,
+  driveFolderUrl: string,
+): Promise<boolean> {
+  const rows = (await getDb()`
+    UPDATE material_classes SET drive_folder_url = ${driveFolderUrl}
+    WHERE id = ${classId} RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function createMaterialTopic(classId: number, title: string): Promise<boolean> {
+  const rows = (await getDb()`
+    INSERT INTO material_topics (class_id, title)
+    SELECT id, ${title} FROM material_classes WHERE id = ${classId}
+    RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function deleteMaterialTopic(classId: number, topicId: number): Promise<boolean> {
+  const rows = (await getDb()`
+    DELETE FROM material_topics WHERE id = ${topicId} AND class_id = ${classId} RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function addMaterialFile(input: {
+  classId: number;
+  topicId: number;
+  name: string;
+  url: string;
+  type: MaterialFileType;
+}): Promise<boolean> {
+  const rows = (await getDb()`
+    INSERT INTO material_files (topic_id, name, url, file_type)
+    SELECT id, ${input.name}, ${input.url}, ${input.type}
+    FROM material_topics WHERE id = ${input.topicId} AND class_id = ${input.classId}
+    RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function deleteMaterialFile(input: {
+  classId: number;
+  topicId: number;
+  fileId: number;
+}): Promise<boolean> {
+  const rows = (await getDb()`
+    DELETE FROM material_files f
+    USING material_topics t
+    WHERE f.id = ${input.fileId} AND f.topic_id = t.id
+      AND t.id = ${input.topicId} AND t.class_id = ${input.classId}
+    RETURNING f.id
+  `) as DatabaseRow[];
+  return rows.length > 0;
 }
 
 // Student Textbooks

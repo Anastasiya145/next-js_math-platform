@@ -8,7 +8,7 @@ import SchoolIcon from "@mui/icons-material/SchoolOutlined";
 import StarIcon from "@mui/icons-material/StarOutlineRounded";
 import { auth } from "@/auth";
 import { listHomeworkForTeacher, listStudents } from "@/lib/db";
-import { formatDay } from "@/lib/format";
+import { formatLesson } from "@/lib/format";
 import { AppShell } from "@/components/AppShell";
 import { ItemRow } from "@/components/ItemRow";
 import { PageSection } from "@/components/PageSection";
@@ -93,7 +93,7 @@ export default async function Home() {
                   icon={<AssignmentIcon />}
                   primary={homework.title}
                   secondary={`${homework.students.length} учн.${
-                    homework.nextLessonAt ? ` · урок ${formatDay(homework.nextLessonAt)}` : ""
+                    homework.nextLessonAt ? ` · урок ${formatLesson(homework.nextLessonAt)}` : ""
                   }`}
                   actions={
                     <Chip

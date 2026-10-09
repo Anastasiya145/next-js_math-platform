@@ -14,6 +14,7 @@ import { IconAction, ItemRow } from "@/components/ItemRow";
 import { PageSection } from "@/components/PageSection";
 import { toneAt } from "@/components/tones";
 import { router } from "../router";
+import { DriveFolderAction } from "./DriveFolderAction";
 import { StudentDialog } from "./StudentDialog";
 import type { Student } from "./types";
 
@@ -73,6 +74,7 @@ export default function StudentsPage() {
                       >
                         <VisibilityIcon />
                       </IconAction>
+                      <DriveFolderAction student={student} onChanged={reload} />
                       <IconAction
                         label="Редагувати"
                         color="warning"
