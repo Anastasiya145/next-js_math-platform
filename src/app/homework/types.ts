@@ -3,7 +3,7 @@ export type HomeworkStudentTarget = {
   name: string;
   grade: number;
   status: "submitted" | "no_homework" | null;
-  fileName: string | null;
+  files: Array<{ id: number; name: string }>;
   score: number | null;
   feedback: string;
   submittedAt: string | null;

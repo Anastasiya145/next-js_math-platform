@@ -92,7 +92,7 @@ function StudentLogin() {
         error={Boolean(passwordError)}
         helperText={passwordError}
       />
-      <Button type="submit" variant="contained" size="large" disabled={busy || !valid}>
+      <Button type="submit" variant="contained" size="large" loading={busy} disabled={!valid}>
         Увійти
       </Button>
     </Stack>
@@ -107,6 +107,7 @@ export function LoginForm({
   message: string | null;
 }) {
   const [role, setRole] = useState<"teacher" | "student">("teacher");
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   return (
     <Box sx={{ display: "grid", minHeight: "100vh", gridTemplateColumns: { md: "1fr 1fr" } }}>
@@ -211,7 +212,11 @@ export function LoginForm({
                 variant="outlined"
                 startIcon={<GoogleIcon />}
                 disabled={!googleLoginConfigured}
-                onClick={() => signIn("google", { redirectTo: router.home })}
+                loading={googleBusy}
+                onClick={() => {
+                  setGoogleBusy(true);
+                  signIn("google", { redirectTo: router.home }).catch(() => setGoogleBusy(false));
+                }}
               >
                 Вхід через Google
               </Button>

@@ -16,7 +16,14 @@ import AttachFileIcon from "@mui/icons-material/AttachFile";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { api, useAction } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
-import { formatDateTime, formatLesson } from "@/lib/format";
+import { formatDue } from "@/lib/format";
+import {
+  ALLOWED_FILE_TYPES,
+  MAX_FILE_SIZE,
+  MAX_SUBMISSION_FILES,
+  MAX_SUBMISSION_SIZE,
+  SUBMISSION_FILE_ACCEPT,
+} from "@/lib/homework-files";
 import { shade, tint, type Tone } from "@/components/tones";
 import { router } from "../router";
 import type { StudentHomeworkItem } from "./types";
@@ -27,9 +34,14 @@ type Props = {
   onChanged: () => Promise<unknown>;
 };
 
+const isSameFile = (a: File, b: File) =>
+  a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
+
 export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props) {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const { busy, error, run } = useAction();
+  const [pending, setPending] = useState<"upload" | "no-homework" | null>(null);
   const { submission } = homework;
   const tone: Tone = submission.gradedAt
     ? "success"
@@ -47,9 +59,40 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
           ? "warning"
           : "error";
 
+  const addFiles = (selected: File[]) => {
+    const next = [...files];
+    let total = next.reduce((sum, item) => sum + item.size, 0);
+    let problem: string | null = null;
+    for (const file of selected) {
+      if (next.some((item) => isSameFile(item, file))) continue;
+      if (!ALLOWED_FILE_TYPES.has(file.type)) {
+        problem = errorMessages.homework.fileTypeNotAllowed;
+      } else if (file.size === 0) {
+        problem = errorMessages.homework.fileRequired;
+      } else if (file.size > MAX_FILE_SIZE) {
+        problem = errorMessages.homework.fileTooLarge;
+      } else if (next.length >= MAX_SUBMISSION_FILES) {
+        problem = errorMessages.homework.tooManyFiles;
+      } else if (total + file.size > MAX_SUBMISSION_SIZE) {
+        problem = errorMessages.homework.submissionTooLarge;
+      } else {
+        next.push(file);
+        total += file.size;
+      }
+    }
+    setFiles(next);
+    setSelectionError(problem);
+  };
+
+  const removeFile = (file: File) => {
+    setFiles((current) => current.filter((item) => item !== file));
+    setSelectionError(null);
+  };
+
   const upload = async () => {
     const body = new FormData();
-    body.set("file", file!);
+    files.forEach((file) => body.append("file", file));
+    setPending("upload");
     if (
       await run(() =>
         api(router.api.homeworkSubmission(homework.id), {
@@ -58,12 +101,13 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
         }),
       )
     ) {
-      setFile(null);
+      setFiles([]);
       await onChanged();
     }
   };
 
   const noHomework = async () => {
+    setPending("no-homework");
     if (
       await run(() =>
         api(router.api.homeworkNoHomework(homework.id), {
@@ -87,7 +131,9 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
       <CardHeader
         title={homework.title}
         subheader={
-          submission.gradedAt ? "Перевірено" : `Здати до: ${formatDateTime(homework.dueAt)}`
+          submission.gradedAt
+            ? "Перевірено"
+            : `Здати до: ${formatDue(homework.nextLessonAt, homework.dueAt)}`
         }
         action={
           submission.score !== null && <Chip color={scoreTone} label={`${submission.score}/12`} />
@@ -96,12 +142,6 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
       />
       <CardContent sx={{ pt: 0 }}>
         <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
-          {homework.nextLessonAt && (
-            <Typography variant="body2" color="text.secondary">
-              {submission.gradedAt ? "Урок був" : "Наступний урок"}:{" "}
-              {formatLesson(homework.nextLessonAt)}
-            </Typography>
-          )}
           {homework.instructions && <Typography>{homework.instructions}</Typography>}
           {homework.resourceUrl && (
             <Button
@@ -116,7 +156,9 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
           )}
           {submission.status === "submitted" && (
             <Alert severity="info" sx={{ width: "100%" }}>
-              {submission.fileName ? `Надіслано: ${submission.fileName}` : "Роботу надіслано"}
+              {submission.files.length > 0
+                ? `Надіслано: ${submission.files.map((file) => file.name).join(", ")}`
+                : "Роботу надіслано"}
               {!submission.gradedAt && " · чекає перевірки"}
             </Alert>
           )}
@@ -135,6 +177,24 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
               {error}
             </Alert>
           )}
+          {!readOnly && !submission.status && files.length > 0 && (
+            <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1, maxWidth: "100%" }}>
+              {files.map((file) => (
+                <Chip
+                  key={`${file.name}-${file.size}-${file.lastModified}`}
+                  label={file.name}
+                  disabled={busy}
+                  onDelete={() => removeFile(file)}
+                  sx={{ maxWidth: "100%" }}
+                />
+              ))}
+            </Stack>
+          )}
+          {selectionError && (
+            <Alert severity="warning" sx={{ width: "100%" }}>
+              {selectionError}
+            </Alert>
+          )}
         </Stack>
       </CardContent>
       {!readOnly && !submission.status && (
@@ -145,22 +205,36 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
             startIcon={<AttachFileIcon />}
             disabled={busy}
           >
-            Обрати файл
+            {files.length > 0 ? "Додати ще файли" : "Обрати файли"}
             <input
               hidden
+              multiple
               type="file"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              accept={SUBMISSION_FILE_ACCEPT}
+              onChange={(event) => {
+                addFiles(Array.from(event.target.files ?? []));
+                event.target.value = "";
+              }}
             />
           </Button>
-          {file && <Chip label={file.name} onDelete={() => setFile(null)} />}
-          <Button variant="contained" disabled={!file || busy} onClick={upload}>
-            Надіслати роботу
+          <Button
+            variant="contained"
+            loading={busy && pending === "upload"}
+            disabled={files.length === 0 || busy}
+            onClick={upload}
+          >
+            {files.length > 1 ? `Надіслати роботу (${files.length})` : "Надіслати роботу"}
           </Button>
           <Typography variant="body2" color="text.secondary">
             або
           </Typography>
-          <Button variant="outlined" color="warning" disabled={busy} onClick={noHomework}>
+          <Button
+            variant="outlined"
+            color="warning"
+            loading={busy && pending === "no-homework"}
+            disabled={busy}
+            onClick={noHomework}
+          >
             Немає ДЗ · 0 балів
           </Button>
         </CardActions>

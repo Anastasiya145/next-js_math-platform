@@ -8,11 +8,13 @@ import { FormDialog } from "./FormDialog";
 export type FieldSpec = {
   name: string;
   label: string;
-  type?: "text" | "url" | "date" | "datetime-local" | "select" | "multiline";
+  // "number" accepts a whole number from 1 to `max`.
+  type?: "text" | "url" | "date" | "datetime-local" | "select" | "multiline" | "number";
   options?: Array<[value: string, label: string]>;
   defaultValue?: string;
   optional?: boolean;
   maxLength?: number;
+  max?: number;
 };
 
 export type FieldsDialogProps = {
@@ -54,6 +56,11 @@ export function FieldsDialog({
   const errorFor = (field: FieldSpec) => {
     const value = values[field.name].trim();
     if (!value) return field.optional ? null : "";
+    if (field.type === "number") {
+      const number = Number(value);
+      const valid = /^\d+$/.test(value) && number >= 1 && number <= (field.max ?? Infinity);
+      return valid ? null : errorMessages.common.invalidNumber;
+    }
     return field.type === "url" && !isHttpUrl(value) ? errorMessages.common.invalidUrl : null;
   };
 
@@ -90,7 +97,10 @@ export function FieldsDialog({
             error={Boolean(error)}
             helperText={error}
             slotProps={{
-              htmlInput: { maxLength: field.maxLength },
+              htmlInput: {
+                maxLength: field.maxLength,
+                inputMode: field.type === "number" ? "numeric" : undefined,
+              },
               inputLabel:
                 field.type === "date" || field.type === "datetime-local"
                   ? { shrink: true }

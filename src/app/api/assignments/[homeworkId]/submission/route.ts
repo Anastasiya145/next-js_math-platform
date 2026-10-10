@@ -12,17 +12,59 @@ import {
   saveHomeworkSubmission,
   setStudentDriveFolderId,
 } from "@/lib/db";
+import {
+  ALLOWED_FILE_TYPES,
+  MAX_FILE_SIZE,
+  MAX_SUBMISSION_FILES,
+  MAX_SUBMISSION_SIZE,
+} from "@/lib/homework-files";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_FILE_TYPES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "text/plain",
-]);
+type UploadResult = { id: string } | { error: string };
+
+async function uploadDriveFile(
+  accessToken: string,
+  file: File,
+  metadata: Record<string, unknown>,
+): Promise<UploadResult> {
+  const boundary = `tutor-${randomUUID()}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const body = Buffer.concat([
+    Buffer.from(
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${file.type}\r\n\r\n`,
+    ),
+    bytes,
+    Buffer.from(`\r\n--${boundary}--`),
+  ]);
+
+  const response = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    },
+  );
+  if (!response.ok) {
+    console.error("Drive upload failed", response.status, await response.text());
+    return { error: errorMessages.drive.uploadRejected };
+  }
+  const driveFile = (await response.json()) as { id?: string };
+  return driveFile.id ? { id: driveFile.id } : { error: errorMessages.drive.fileIdMissing };
+}
+
+async function deleteDriveFiles(accessToken: string, fileIds: string[]) {
+  await Promise.all(
+    fileIds.map((fileId) =>
+      fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }).catch(() => null),
+    ),
+  );
+}
 
 export async function GET(request: Request, context: { params: Promise<{ homeworkId: string }> }) {
   const teacher = await getTeacherUser();
@@ -31,19 +73,22 @@ export async function GET(request: Request, context: { params: Promise<{ homewor
   }
 
   const homeworkId = Number((await context.params).homeworkId);
-  const requestedStudentId = Number(new URL(request.url).searchParams.get("studentId"));
-  const studentId = requestedStudentId;
+  const searchParams = new URL(request.url).searchParams;
+  const studentId = Number(searchParams.get("studentId"));
+  const fileId = Number(searchParams.get("fileId"));
   if (
     !Number.isInteger(homeworkId) ||
     homeworkId < 1 ||
     !Number.isInteger(studentId) ||
     studentId < 1 ||
+    !Number.isInteger(fileId) ||
+    fileId < 1 ||
     !(await isHomeworkAssignedToStudent(homeworkId, studentId))
   ) {
     return NextResponse.json({ error: errorMessages.homework.fileNotFound }, { status: 404 });
   }
 
-  const file = await getHomeworkSubmissionFile(homeworkId, studentId);
+  const file = await getHomeworkSubmissionFile(homeworkId, studentId, fileId);
   if (!file) {
     return NextResponse.json({ error: errorMessages.homework.fileNotFound }, { status: 404 });
   }
@@ -97,14 +142,22 @@ export async function POST(request: Request, context: { params: Promise<{ homewo
   }
 
   const formData = await request.formData();
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
+  const files = formData
+    .getAll("file")
+    .filter((value): value is File => value instanceof File && value.size > 0);
+  if (files.length === 0) {
     return NextResponse.json({ error: errorMessages.homework.fileRequired }, { status: 400 });
   }
-  if (file.size > MAX_FILE_SIZE) {
+  if (files.length > MAX_SUBMISSION_FILES) {
+    return NextResponse.json({ error: errorMessages.homework.tooManyFiles }, { status: 400 });
+  }
+  if (files.some((file) => file.size > MAX_FILE_SIZE)) {
     return NextResponse.json({ error: errorMessages.homework.fileTooLarge }, { status: 413 });
   }
-  if (!ALLOWED_FILE_TYPES.has(file.type)) {
+  if (files.reduce((total, file) => total + file.size, 0) > MAX_SUBMISSION_SIZE) {
+    return NextResponse.json({ error: errorMessages.homework.submissionTooLarge }, { status: 413 });
+  }
+  if (files.some((file) => !ALLOWED_FILE_TYPES.has(file.type))) {
     return NextResponse.json({ error: errorMessages.homework.fileTypeNotAllowed }, { status: 415 });
   }
 
@@ -149,66 +202,46 @@ export async function POST(request: Request, context: { params: Promise<{ homewo
     driveFolderId = await setStudentDriveFolderId(student.studentId, folder.id);
   }
 
-  const boundary = `tutor-${randomUUID()}`;
-  const safeFileName = file.name.replace(/[\r\n"\\/]/g, "_").slice(0, 180);
-  const metadata = {
-    name: `${studentProfile.name} - ${homework.title} - ${safeFileName}`,
-    mimeType: file.type,
-    parents: [driveFolderId],
-    appProperties: {
-      homeworkId: String(homeworkId),
-      studentId: String(student.studentId),
-    },
-  };
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const body = Buffer.concat([
-    Buffer.from(
-      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: ${file.type}\r\n\r\n`,
-    ),
-    bytes,
-    Buffer.from(`\r\n--${boundary}--`),
-  ]);
-
-  const driveResponse = await fetch(
-    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": `multipart/related; boundary=${boundary}`,
+  const uploaded: Array<{ driveFileId: string; fileName: string }> = [];
+  for (const file of files) {
+    const fileName = file.name.replace(/[\r\n"\\/]/g, "_").slice(0, 180);
+    const result = await uploadDriveFile(accessToken, file, {
+      name: `${studentProfile.name} - ${homework.title} - ${fileName}`,
+      mimeType: file.type,
+      parents: [driveFolderId],
+      appProperties: {
+        homeworkId: String(homeworkId),
+        studentId: String(student.studentId),
       },
-      body,
-    },
-  );
-  if (!driveResponse.ok) {
-    console.error("Drive upload failed", driveResponse.status, await driveResponse.text());
-    return NextResponse.json({ error: errorMessages.drive.uploadRejected }, { status: 502 });
-  }
-
-  const driveFile = (await driveResponse.json()) as {
-    id?: string;
-    name?: string;
-  };
-  if (!driveFile.id) {
-    return NextResponse.json({ error: errorMessages.drive.fileIdMissing }, { status: 502 });
+    });
+    if ("error" in result) {
+      await deleteDriveFiles(
+        accessToken,
+        uploaded.map((item) => item.driveFileId),
+      );
+      return NextResponse.json({ error: result.error }, { status: 502 });
+    }
+    uploaded.push({ driveFileId: result.id, fileName });
   }
 
   const saved = await saveHomeworkSubmission({
     homeworkId,
     studentId: student.studentId,
     status: "submitted",
-    driveFileId: driveFile.id,
-    fileName: safeFileName,
+    files: uploaded,
   });
   if (!saved) {
-    await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(driveFile.id)}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }).catch(() => null);
+    await deleteDriveFiles(
+      accessToken,
+      uploaded.map((item) => item.driveFileId),
+    );
     return NextResponse.json(
       { error: errorMessages.homework.submissionResubmitClosed },
       { status: 409 },
     );
   }
-  return NextResponse.json({ data: { fileName: safeFileName } }, { status: 201 });
+  return NextResponse.json(
+    { data: { fileNames: uploaded.map((item) => item.fileName) } },
+    { status: 201 },
+  );
 }

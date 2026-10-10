@@ -8,7 +8,7 @@ import { NushTopicsManager } from "./NushTopicsManager";
 import { TextbookManager } from "./TextbookManager";
 
 const TABS = [
-  { label: "Класи й файли", content: <ClassMaterials /> },
+  // { label: "Класи й файли", content: <ClassMaterials /> },
   { label: "Програма НУШ", content: <NushTopicsManager /> },
   { label: "Підручники", content: <TextbookManager /> },
 ];

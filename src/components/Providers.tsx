@@ -70,7 +70,7 @@ const theme = createTheme({
       },
     },
     MuiButton: {
-      defaultProps: { disableElevation: true },
+      defaultProps: { disableElevation: true, loadingPosition: "start" },
       styleOverrides: {
         root: { borderRadius: 12 },
         contained: ({ ownerState }) => {

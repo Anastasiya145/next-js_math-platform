@@ -56,15 +56,16 @@ export function HomeworkStudentRow({ homeworkId, student, onGraded }: Props) {
           {student.grade} клас
         </Typography>
         <Chip size="small" label={status.label} color={status.color} />
-        {student.fileName && (
+        {student.files.map((file) => (
           <Button
+            key={file.id}
             size="small"
             startIcon={<DownloadIcon />}
-            href={`${router.api.homeworkSubmission(homeworkId)}?studentId=${student.id}`}
+            href={`${router.api.homeworkSubmission(homeworkId)}?studentId=${student.id}&fileId=${file.id}`}
           >
-            {student.fileName}
+            {file.name}
           </Button>
-        )}
+        ))}
       </Stack>
       {student.status && (
         <Stack
@@ -88,7 +89,7 @@ export function HomeworkStudentRow({ homeworkId, student, onGraded }: Props) {
             value={feedback}
             onChange={(event) => setFeedback(event.target.value)}
           />
-          <Button type="submit" variant="outlined" disabled={busy || score === ""}>
+          <Button type="submit" variant="outlined" loading={busy} disabled={score === ""}>
             Зберегти
           </Button>
         </Stack>

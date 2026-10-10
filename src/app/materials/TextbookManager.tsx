@@ -7,6 +7,7 @@ import { api, useAction, useApi } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
 import { GRADES } from "@/lib/format";
 import { AddAction } from "@/components/AddAction";
+import { EditAction } from "@/components/EditAction";
 import { LinkList } from "@/components/LinkList";
 import { PageSection } from "@/components/PageSection";
 import { toneAt } from "@/components/tones";
@@ -95,6 +96,64 @@ export function TextbookManager() {
                       secondary: [item.subject, item.author, item.isDemo ? "демо" : ""]
                         .filter(Boolean)
                         .join(" · "),
+                      edit: (
+                        <EditAction
+                          label={`Редагувати: ${item.title}`}
+                          title="Редагувати матеріал"
+                          fields={[
+                            {
+                              name: "title",
+                              label: "Назва",
+                              maxLength: 180,
+                              defaultValue: item.title,
+                            },
+                            {
+                              name: "grade",
+                              label: "Клас",
+                              type: "select",
+                              options: GRADES.map((value) => [String(value), `${value} клас`]),
+                              defaultValue: String(item.grade),
+                            },
+                            {
+                              name: "subject",
+                              label: "Предмет",
+                              maxLength: 80,
+                              defaultValue: item.subject,
+                            },
+                            {
+                              name: "author",
+                              label: "Автор або джерело",
+                              optional: true,
+                              maxLength: 160,
+                              defaultValue: item.author,
+                            },
+                            {
+                              name: "resourceType",
+                              label: "Тип матеріалу",
+                              type: "select",
+                              options: [
+                                ["textbook", "Підручник"],
+                                ["practice", "Тренажер"],
+                              ],
+                              defaultValue: item.resourceType,
+                            },
+                            {
+                              name: "url",
+                              label: "Посилання",
+                              type: "url",
+                              defaultValue: item.url,
+                            },
+                          ]}
+                          onSubmit={async (values) => {
+                            await api(router.api.textbook(Number(item.id)), {
+                              method: "PATCH",
+                              body: { ...values, grade: Number(values.grade) },
+                              fallback: errorMessages.textbooks.saveFailed,
+                            });
+                            await reload();
+                          }}
+                        />
+                      ),
                     }))}
                     onDelete={async (id) => {
                       const deleted = await remove.run(() =>

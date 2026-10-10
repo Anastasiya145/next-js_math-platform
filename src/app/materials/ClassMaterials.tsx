@@ -25,10 +25,12 @@ import { errorMessages } from "@/lib/error-messages";
 import { ActionRow } from "@/components/ActionRow";
 import { AddAction } from "@/components/AddAction";
 import { DeleteAction } from "@/components/DeleteAction";
+import { EditAction } from "@/components/EditAction";
 import { LinkList } from "@/components/LinkList";
 import { PageSection } from "@/components/PageSection";
 import { shade, toneAt, type Tone } from "@/components/tones";
 import { router } from "../router";
+import { AssignHomeworkAction } from "../homework/AssignHomeworkAction";
 
 type FileType = "pdf" | "doc" | "image" | "link" | "other";
 type ClassFolder = {
@@ -70,6 +72,8 @@ export function ClassMaterials() {
 
   const remove = (body: Record<string, unknown>) =>
     post(body, errorMessages.materials.deleteFailed);
+
+  const save = (body: Record<string, unknown>) => post(body, errorMessages.materials.saveFailed);
 
   return (
     <PageSection
@@ -142,6 +146,20 @@ export function ClassMaterials() {
                 Відкрити папку
               </Button>
             )}
+            <EditAction
+              label="Редагувати клас"
+              fields={[
+                {
+                  name: "className",
+                  label: "Назва класу, напр. 8 клас",
+                  maxLength: 80,
+                  defaultValue: current.className,
+                },
+              ]}
+              onSubmit={(values) =>
+                save({ action: "update-class", classId: current.id, ...values })
+              }
+            />
             <DeleteAction
               key={`delete-${current.id}`}
               label={`Видалити клас: ${current.className}`}
@@ -156,13 +174,35 @@ export function ClassMaterials() {
             <ActionRow
               key={topic.id}
               action={
-                <DeleteAction
-                  label={`Видалити тему: ${topic.title}`}
-                  message={`Тему «${topic.title}» разом з усіма файлами буде видалено.`}
-                  onConfirm={() =>
-                    remove({ action: "delete-topic", classId: current.id, topicId: topic.id })
-                  }
-                />
+                <>
+                  <EditAction
+                    label={`Редагувати тему: ${topic.title}`}
+                    title="Редагувати тему"
+                    fields={[
+                      {
+                        name: "topicTitle",
+                        label: "Назва теми, напр. Відсотки",
+                        maxLength: 120,
+                        defaultValue: topic.title,
+                      },
+                    ]}
+                    onSubmit={(values) =>
+                      save({
+                        action: "update-topic",
+                        classId: current.id,
+                        topicId: topic.id,
+                        ...values,
+                      })
+                    }
+                  />
+                  <DeleteAction
+                    label={`Видалити тему: ${topic.title}`}
+                    message={`Тему «${topic.title}» разом з усіма файлами буде видалено.`}
+                    onConfirm={() =>
+                      remove({ action: "delete-topic", classId: current.id, topicId: topic.id })
+                    }
+                  />
+                </>
               }
             >
               <Accordion
@@ -188,6 +228,43 @@ export function ClassMaterials() {
                       secondary: `Додано ${file.addedAt}`,
                       icon: FILE_TYPES.find(([type]) => type === file.type)?.[2],
                       tone: FILE_TYPES.find(([type]) => type === file.type)?.[3],
+                      extra: <AssignHomeworkAction title={file.name} url={file.url} />,
+                      edit: (
+                        <EditAction
+                          label={`Редагувати: ${file.name}`}
+                          title="Редагувати файл"
+                          fields={[
+                            {
+                              name: "name",
+                              label: "Назва файлу",
+                              maxLength: 160,
+                              defaultValue: file.name,
+                            },
+                            {
+                              name: "url",
+                              label: "Посилання (Google Диск тощо)",
+                              type: "url",
+                              defaultValue: file.url,
+                            },
+                            {
+                              name: "type",
+                              label: "Тип",
+                              type: "select",
+                              options: FILE_TYPES.map(([value, label]) => [value, label]),
+                              defaultValue: file.type,
+                            },
+                          ]}
+                          onSubmit={({ name, url, type }) =>
+                            save({
+                              action: "update-file",
+                              classId: current.id,
+                              topicId: topic.id,
+                              fileId: file.id,
+                              file: { name, url, type },
+                            })
+                          }
+                        />
+                      ),
                     }))}
                     busy={fileRemoval.busy}
                     onDelete={(fileId) =>

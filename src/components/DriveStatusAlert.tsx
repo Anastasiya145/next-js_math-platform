@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Alert, Button } from "@mui/material";
 import GoogleIcon from "@mui/icons-material/Google";
@@ -11,6 +12,7 @@ import { router } from "@/app/router";
 // Warns the teacher before students hit an upload error; hidden while Drive works or the check fails.
 export function DriveStatusAlert() {
   const pathname = usePathname();
+  const [connecting, setConnecting] = useState(false);
   const { data } = useApi<{ connected: boolean }>(
     router.api.driveStatus,
     errorMessages.drive.statusFailed,
@@ -27,7 +29,11 @@ export function DriveStatusAlert() {
           color="inherit"
           size="small"
           startIcon={<GoogleIcon />}
-          onClick={() => signIn("google", { redirectTo: pathname })}
+          loading={connecting}
+          onClick={() => {
+            setConnecting(true);
+            signIn("google", { redirectTo: pathname }).catch(() => setConnecting(false));
+          }}
         >
           Підключити
         </Button>

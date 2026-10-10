@@ -11,6 +11,7 @@ type AddActionProps = Omit<FieldsDialogProps, "title" | "onClose"> & {
   icon?: ReactNode;
   variant?: ButtonProps["variant"];
   color?: ButtonProps["color"];
+  size?: ButtonProps["size"];
 };
 
 // Button that opens a spec-driven FieldsDialog.
@@ -20,13 +21,20 @@ export function AddAction({
   icon = <AddIcon />,
   variant = "contained",
   color,
+  size,
   ...dialog
 }: AddActionProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button variant={variant} color={color} startIcon={icon} onClick={() => setOpen(true)}>
+      <Button
+        variant={variant}
+        color={color}
+        size={size}
+        startIcon={icon}
+        onClick={() => setOpen(true)}
+      >
         {label}
       </Button>
       {open && <FieldsDialog title={title} {...dialog} onClose={() => setOpen(false)} />}

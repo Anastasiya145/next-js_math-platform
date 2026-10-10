@@ -67,7 +67,7 @@ export function FormDialog({
         <Button variant="outlined" color="inherit" onClick={onClose} disabled={busy}>
           Скасувати
         </Button>
-        <Button type="submit" variant="contained" disabled={busy || submitDisabled}>
+        <Button type="submit" variant="contained" loading={busy} disabled={submitDisabled}>
           {submitLabel}
         </Button>
       </DialogActions>

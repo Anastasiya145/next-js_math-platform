@@ -21,6 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import AssignmentIcon from "@mui/icons-material/AssignmentOutlined";
+import CalendarIcon from "@mui/icons-material/CalendarMonthOutlined";
 import DashboardIcon from "@mui/icons-material/DashboardOutlined";
 import FunctionsIcon from "@mui/icons-material/Functions";
 import MenuBookIcon from "@mui/icons-material/MenuBookOutlined";
@@ -35,6 +36,7 @@ const DRAWER_WIDTH = 256;
 const NAV: Record<string, { icon: ReactNode; tone: Tone }> = {
   [router.home]: { icon: <DashboardIcon />, tone: "primary" },
   [router.students]: { icon: <PeopleIcon />, tone: "info" },
+  [router.schedule]: { icon: <CalendarIcon />, tone: "secondary" },
   [router.homework]: { icon: <AssignmentIcon />, tone: "warning" },
   [router.materials]: { icon: <MenuBookIcon />, tone: "success" },
 };

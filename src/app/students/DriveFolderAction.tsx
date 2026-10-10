@@ -53,7 +53,7 @@ export function DriveFolderAction({ student, onChanged }: Props) {
       <IconAction
         label={linked ? "Змінити папку Google Drive" : "Обрати папку Google Drive"}
         color={linked ? "success" : "inherit"}
-        disabled={busy}
+        loading={busy}
         onClick={choose}
       >
         {linked ? <FolderSharedIcon /> : <FolderIcon />}

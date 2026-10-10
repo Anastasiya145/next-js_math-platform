@@ -1,6 +1,7 @@
 export const router = {
   home: "/",
   students: "/students",
+  schedule: "/schedule",
   homework: "/homework",
   materials: "/materials",
   student: "/student",
@@ -11,6 +12,9 @@ export const router = {
     student: (studentId: number) => `/api/students?id=${studentId}`,
     studentTextbooks: (studentId: number) => `/api/students/${studentId}/textbooks`,
     studentDriveFolder: (studentId: number) => `/api/students/${studentId}/drive-folder`,
+    studentSchedule: (studentId: number) => `/api/students/${studentId}/schedule`,
+    schedule: "/api/schedule",
+    payments: "/api/payments",
     materials: "/api/materials",
     nush: "/api/nush",
     textbooks: "/api/textbooks",
@@ -30,6 +34,7 @@ export const router = {
 export const navItems = [
   { href: router.home, label: "Огляд" },
   { href: router.students, label: "Учні" },
+  { href: router.schedule, label: "Розклад і бюджет" },
   { href: router.homework, label: "Домашні завдання" },
   { href: router.materials, label: "Матеріали" },
 ] as const;

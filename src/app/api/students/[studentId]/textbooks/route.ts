@@ -5,6 +5,7 @@ import {
   getStudentTextbooks,
   addStudentTextbook,
   deleteStudentTextbook,
+  updateStudentTextbook,
   type PersonalStudentTextbook,
 } from "@/lib/db";
 
@@ -78,6 +79,46 @@ export async function POST(
   } catch {
     return NextResponse.json({ error: "Failed to add textbook" }, { status: 500 });
   }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ studentId: string }> },
+) {
+  if (!(await getTeacherUser())) {
+    return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+  }
+
+  const studentId = Number((await params).studentId);
+  const textbookId = Number(new URL(request.url).searchParams.get("textbookId"));
+  if (
+    !Number.isInteger(studentId) ||
+    studentId < 1 ||
+    !Number.isInteger(textbookId) ||
+    textbookId < 1
+  ) {
+    return NextResponse.json({ error: errorMessages.textbooks.notFound }, { status: 404 });
+  }
+
+  const body = (await request.json().catch(() => null)) as PostBody | null;
+  const title = body?.title?.trim();
+  const url = body?.url?.trim() ?? "";
+  const subject = body?.subject?.trim() ?? "";
+  const validUrl = (() => {
+    try {
+      return ["http:", "https:"].includes(new URL(url).protocol);
+    } catch {
+      return false;
+    }
+  })();
+  if (!title || title.length > 180 || !validUrl || subject.length > 80) {
+    return NextResponse.json({ error: errorMessages.textbooks.invalidInput }, { status: 400 });
+  }
+
+  if (!(await updateStudentTextbook({ studentId, textbookId, title, url, subject }))) {
+    return NextResponse.json({ error: errorMessages.textbooks.notFound }, { status: 404 });
+  }
+  return NextResponse.json({ data: { id: textbookId } });
 }
 
 export async function DELETE(

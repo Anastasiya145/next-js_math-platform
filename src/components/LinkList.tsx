@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { List } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import LinkIcon from "@mui/icons-material/LinkOutlined";
@@ -15,6 +15,10 @@ export type LinkItem = {
   secondary?: ReactNode;
   icon?: ReactNode;
   tone?: Tone;
+  // Rendered right after "open", e.g. an assign-as-homework button.
+  extra?: ReactNode;
+  // Rendered between "open" and "delete", e.g. an EditAction.
+  edit?: ReactNode;
 };
 
 // List of external links with an "open" action and an optional "delete" action.
@@ -24,9 +28,20 @@ export function LinkList({
   busy,
 }: {
   items: LinkItem[];
-  onDelete?: (id: LinkItem["id"]) => void;
+  onDelete?: (id: LinkItem["id"]) => unknown;
   busy?: boolean;
 }) {
+  const [pendingId, setPendingId] = useState<LinkItem["id"] | null>(null);
+
+  const remove = async (id: LinkItem["id"]) => {
+    setPendingId(id);
+    try {
+      await onDelete?.(id);
+    } finally {
+      setPendingId(null);
+    }
+  };
+
   return (
     <List disablePadding>
       {items.map((item) => (
@@ -46,12 +61,15 @@ export function LinkList({
               >
                 <OpenInNewIcon />
               </IconAction>
+              {item.extra}
+              {item.edit}
               {onDelete && (
                 <IconAction
                   label={`Видалити: ${item.name}`}
                   color="error"
+                  loading={pendingId === item.id}
                   disabled={busy}
-                  onClick={() => onDelete(item.id)}
+                  onClick={() => void remove(item.id)}
                 >
                   <DeleteIcon />
                 </IconAction>

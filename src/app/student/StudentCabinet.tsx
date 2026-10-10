@@ -8,16 +8,16 @@ import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedInOutlin
 import EventIcon from "@mui/icons-material/EventOutlined";
 import MenuBookIcon from "@mui/icons-material/MenuBookOutlined";
 import StarIcon from "@mui/icons-material/StarOutlineRounded";
-import { useApi } from "@/lib/api";
+import { api, useApi } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
 import { lessonParts } from "@/lib/format";
+import { AddAction } from "@/components/AddAction";
 import { AppShell } from "@/components/AppShell";
 import { PageSection } from "@/components/PageSection";
 import { ProgressChart } from "@/components/ProgressChart";
 import { StatCard } from "@/components/StatCard";
 import type { Tone } from "@/components/tones";
 import { router } from "../router";
-import { StudentTextbooksEditor } from "../students/StudentTextbooksEditor";
 import { HomeworkAssignmentCard } from "./HomeworkAssignmentCard";
 import { StudentTextbookList } from "./StudentTextbookList";
 import type { StudentDashboardData, StudentHomeworkItem } from "./types";
@@ -133,12 +133,43 @@ export function StudentCabinet({ studentId }: Props) {
             subtitle={`Для ${data.student.grade} класу`}
             icon={<MenuBookIcon />}
             tone="success"
+            action={
+              teacherView && (
+                <AddAction
+                  label="Підручник"
+                  color="success"
+                  title={`Новий підручник для ${data.student.grade} класу`}
+                  fields={[
+                    { name: "title", label: "Назва підручника", maxLength: 180 },
+                    { name: "url", label: "Посилання", type: "url" },
+                    {
+                      name: "subject",
+                      label: "Предмет",
+                      maxLength: 80,
+                      defaultValue: data.student.grade <= 6 ? "Математика" : "Алгебра",
+                    },
+                    { name: "author", label: "Автор", optional: true, maxLength: 160 },
+                  ]}
+                  onSubmit={async (values) => {
+                    // Grade-wide on purpose: it joins the class library and every student of the grade sees it.
+                    await api(router.api.textbooks, {
+                      body: {
+                        ...values,
+                        grade: data.student.grade,
+                        resourceType: "textbook",
+                      },
+                      fallback: errorMessages.textbooks.addFailed,
+                    });
+                    await reload();
+                  }}
+                />
+              )
+            }
             empty={data.textbooks.length === 0}
             emptyText={`Підручники для ${data.student.grade} класу ще не додані.`}
           >
             <StudentTextbookList textbooks={data.textbooks} />
           </PageSection>
-          {teacherView && <StudentTextbooksEditor studentId={studentId!} />}
           {homeworkSection(
             "Актуальна домашня робота",
             active,

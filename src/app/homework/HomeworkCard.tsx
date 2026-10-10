@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import {
   Accordion,
   AccordionDetails,
@@ -13,42 +13,65 @@ import {
   Typography,
 } from "@mui/material";
 import AssignmentIcon from "@mui/icons-material/AssignmentOutlined";
+import EditIcon from "@mui/icons-material/EditOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { api } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
-import { formatDateTime, formatLesson } from "@/lib/format";
+import { formatDue } from "@/lib/format";
 import { ActionRow } from "@/components/ActionRow";
 import { DeleteAction } from "@/components/DeleteAction";
+import { IconAction } from "@/components/ItemRow";
 import { shade, tint } from "@/components/tones";
 import { router } from "../router";
+import { HomeworkForm } from "./HomeworkForm";
 import { HomeworkStudentRow } from "./HomeworkStudentRow";
-import type { TeacherHomework } from "./types";
+import { homeworkStatus } from "./status";
+import type { HomeworkStudentOption, TeacherHomework } from "./types";
 
-type Props = { homework: TeacherHomework; onChanged: () => Promise<void> };
+type Props = {
+  homework: TeacherHomework;
+  students: HomeworkStudentOption[];
+  onChanged: () => Promise<void>;
+};
 
-// Works the student sent (or marked "no homework") that the teacher has not graded yet.
-export const pendingReviewCount = (homework: TeacherHomework) =>
-  homework.students.filter((student) => student.status && !student.gradedAt).length;
-
-export function HomeworkCard({ homework, onChanged }: Props) {
-  const pending = pendingReviewCount(homework);
-  const tone = pending ? "warning" : "success";
+export function HomeworkCard({ homework, students, onChanged }: Props) {
+  const [editing, setEditing] = useState(false);
+  const status = homeworkStatus(homework);
+  const tone = status.tone;
+  const studentNames = homework.students.map((student) => student.name).join(", ");
 
   return (
     <ActionRow
       action={
-        <DeleteAction
-          label={`Видалити: ${homework.title}`}
-          message={`Завдання «${homework.title}» разом з усіма надісланими роботами та оцінками буде видалено.`}
-          onConfirm={async () => {
-            await api(router.api.assignment(homework.id), {
-              method: "DELETE",
-              fallback: errorMessages.homework.deleteFailed,
-            });
-            await onChanged();
-          }}
-        />
+        <>
+          <IconAction
+            label={`Редагувати: ${homework.title}`}
+            color="warning"
+            onClick={() => setEditing(true)}
+          >
+            <EditIcon />
+          </IconAction>
+          {editing && (
+            <HomeworkForm
+              homework={homework}
+              students={students}
+              onSaved={onChanged}
+              onClose={() => setEditing(false)}
+            />
+          )}
+          <DeleteAction
+            label={`Видалити: ${homework.title}`}
+            message={`Завдання «${homework.title}» разом з усіма надісланими роботами та оцінками буде видалено.`}
+            onConfirm={async () => {
+              await api(router.api.assignment(homework.id), {
+                method: "DELETE",
+                fallback: errorMessages.homework.deleteFailed,
+              });
+              await onChanged();
+            }}
+          />
+        </>
       }
     >
       <Accordion disableGutters variant="outlined" sx={{ borderLeft: `6px solid ${shade(tone)}` }}>
@@ -62,18 +85,23 @@ export function HomeworkCard({ homework, onChanged }: Props) {
           <Stack sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontWeight: 600 }}>{homework.title}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {homework.nextLessonAt
-                ? `Наступний урок: ${formatLesson(homework.nextLessonAt)} · `
-                : ""}
-              {formatDateTime(homework.dueAt)}
+              Здати до: {formatDue(homework.nextLessonAt, homework.dueAt)}
             </Typography>
           </Stack>
-          <Chip
-            size="small"
-            sx={{ mr: 1, alignSelf: "center" }}
-            color={tone}
-            label={pending ? `На перевірку: ${pending}` : `Учнів: ${homework.students.length}`}
-          />
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{ mr: 1, alignSelf: "center", alignItems: "center", maxWidth: "50%" }}
+          >
+            <Chip
+              size="small"
+              variant="outlined"
+              title={studentNames}
+              label={studentNames}
+              sx={{ minWidth: 0 }}
+            />
+            <Chip size="small" color={tone} label={status.label} sx={{ flexShrink: 0 }} />
+          </Stack>
         </AccordionSummary>
         <AccordionDetails>
           {homework.instructions && (

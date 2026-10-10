@@ -14,6 +14,7 @@ import { ItemRow } from "@/components/ItemRow";
 import { PageSection } from "@/components/PageSection";
 import { StatCard } from "@/components/StatCard";
 import { toneAt } from "@/components/tones";
+import { homeworkStatus, pendingReviewCount } from "./homework/status";
 import { router } from "./router";
 
 export default async function Home() {
@@ -24,8 +25,6 @@ export default async function Home() {
   const classes = Object.entries(Object.groupBy(students, (student) => student.grade)).sort(
     ([first], [second]) => Number(first) - Number(second),
   );
-  const pending = (homework: (typeof homeworks)[number]) =>
-    homework.students.filter((student) => student.status && !student.gradedAt).length;
   const scores = homeworks.flatMap((homework) =>
     homework.students.flatMap((student) =>
       student.gradedAt && student.score !== null ? [student.score] : [],
@@ -60,7 +59,7 @@ export default async function Home() {
         <Grid size={{ xs: 6, md: 3 }}>
           <StatCard
             label="Потрібно перевірити"
-            value={homeworks.reduce((sum, homework) => sum + pending(homework), 0)}
+            value={homeworks.reduce((sum, homework) => sum + pendingReviewCount(homework), 0)}
             icon={<FactCheckIcon />}
             tone="warning"
           />
@@ -86,26 +85,21 @@ export default async function Home() {
             emptyText="Поки немає призначених завдань"
           >
             <List disablePadding>
-              {homeworks.slice(0, 5).map((homework) => (
-                <ItemRow
-                  key={homework.id}
-                  tone={pending(homework) ? "warning" : "success"}
-                  icon={<AssignmentIcon />}
-                  primary={homework.title}
-                  secondary={`${homework.students.length} учн.${
-                    homework.nextLessonAt ? ` · урок ${formatLesson(homework.nextLessonAt)}` : ""
-                  }`}
-                  actions={
-                    <Chip
-                      size="small"
-                      color={pending(homework) ? "warning" : "success"}
-                      label={
-                        pending(homework) ? `На перевірку: ${pending(homework)}` : "Перевірено"
-                      }
-                    />
-                  }
-                />
-              ))}
+              {homeworks.slice(0, 5).map((homework) => {
+                const status = homeworkStatus(homework);
+                return (
+                  <ItemRow
+                    key={homework.id}
+                    tone={status.tone}
+                    icon={<AssignmentIcon />}
+                    primary={homework.title}
+                    secondary={`${homework.students.length} учн.${
+                      homework.nextLessonAt ? ` · урок ${formatLesson(homework.nextLessonAt)}` : ""
+                    }`}
+                    actions={<Chip size="small" color={status.tone} label={status.label} />}
+                  />
+                );
+              })}
             </List>
           </PageSection>
         </Grid>

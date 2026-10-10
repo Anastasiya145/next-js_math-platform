@@ -10,6 +10,9 @@ import {
   deleteMaterialTopic,
   listMaterialClasses,
   setMaterialClassDriveFolder,
+  updateMaterialClass,
+  updateMaterialFile,
+  updateMaterialTopic,
   type MaterialFileType,
 } from "@/lib/db";
 
@@ -21,6 +24,9 @@ type PostBody = {
     | "add-topic"
     | "add-file"
     | "set-drive-folder"
+    | "update-class"
+    | "update-topic"
+    | "update-file"
     | "delete-class"
     | "delete-topic"
     | "delete-file";
@@ -44,6 +50,25 @@ const isValidHttpUrl = (value: string) => {
 
 const isId = (value: unknown): value is number => Number.isInteger(value) && (value as number) > 0;
 
+// Class names carry the grade number (e.g. "8 клас"), which drives the sort order.
+const parseClassName = (raw: string | undefined) => {
+  const name = raw?.trim();
+  if (!name) return { error: errorMessages.materials.classNameRequired };
+  const grade = Number(name.match(/\d{1,2}/)?.[0]);
+  if (!(grade >= 1 && grade <= 11) || name.length > 120) {
+    return { error: errorMessages.materials.classGradeRequired };
+  }
+  return { name, grade };
+};
+
+const parseFile = (file: PostBody["file"]) => {
+  const name = file?.name?.trim();
+  const url = file?.url?.trim();
+  if (!name || name.length > 160 || !url || !isValidHttpUrl(url)) return null;
+  const type = file?.type && FILE_TYPES.includes(file.type) ? file.type : "link";
+  return { name, url, type };
+};
+
 export async function GET() {
   if (!(await getTeacherUser())) {
     return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
@@ -63,21 +88,11 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "add-class") {
-    const name = body.className?.trim();
-    if (!name) {
-      return NextResponse.json(
-        { error: errorMessages.materials.classNameRequired },
-        { status: 400 },
-      );
+    const parsed = parseClassName(body.className);
+    if ("error" in parsed) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-    const grade = Number(name.match(/\d{1,2}/)?.[0]);
-    if (!(grade >= 1 && grade <= 11) || name.length > 120) {
-      return NextResponse.json(
-        { error: errorMessages.materials.classGradeRequired },
-        { status: 400 },
-      );
-    }
-    await createMaterialClass({ name, grade, createdBy: teacher.email ?? "" });
+    await createMaterialClass({ ...parsed, createdBy: teacher.email ?? "" });
     return NextResponse.json({ data: { ok: true } }, { status: 201 });
   }
 
@@ -85,6 +100,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: errorMessages.materials.classNotFound }, { status: 404 });
   }
   const classId = body.classId;
+
+  if (body.action === "update-class") {
+    const parsed = parseClassName(body.className);
+    if ("error" in parsed) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    if (!(await updateMaterialClass({ classId, ...parsed }))) {
+      return NextResponse.json({ error: errorMessages.materials.classNotFound }, { status: 404 });
+    }
+    return NextResponse.json({ data: { id: classId } });
+  }
 
   if (body.action === "delete-class") {
     if (!(await deleteMaterialClass(classId))) {
@@ -124,19 +150,46 @@ export async function POST(request: Request) {
   const topicId = body.topicId;
 
   if (body.action === "add-file") {
-    const name = body.file?.name?.trim();
-    const url = body.file?.url?.trim();
-    if (!name || name.length > 160 || !url || !isValidHttpUrl(url)) {
+    const file = parseFile(body.file);
+    if (!file) {
       return NextResponse.json(
         { error: errorMessages.materials.fileNameAndUrlRequired },
         { status: 400 },
       );
     }
-    const type = body.file?.type && FILE_TYPES.includes(body.file.type) ? body.file.type : "link";
-    if (!(await addMaterialFile({ classId, topicId, name, url, type }))) {
+    if (!(await addMaterialFile({ classId, topicId, ...file }))) {
       return NextResponse.json({ error: errorMessages.materials.topicNotFound }, { status: 404 });
     }
     return NextResponse.json({ data: { ok: true } }, { status: 201 });
+  }
+
+  if (body.action === "update-topic") {
+    const title = body.topicTitle?.trim();
+    if (!title || title.length > 160) {
+      return NextResponse.json(
+        { error: errorMessages.materials.topicTitleRequired },
+        { status: 400 },
+      );
+    }
+    if (!(await updateMaterialTopic({ classId, topicId, title }))) {
+      return NextResponse.json({ error: errorMessages.materials.topicNotFound }, { status: 404 });
+    }
+    return NextResponse.json({ data: { id: topicId } });
+  }
+
+  if (body.action === "update-file") {
+    const file = parseFile(body.file);
+    if (!file) {
+      return NextResponse.json(
+        { error: errorMessages.materials.fileNameAndUrlRequired },
+        { status: 400 },
+      );
+    }
+    const fileId = body.fileId;
+    if (!isId(fileId) || !(await updateMaterialFile({ classId, topicId, fileId, ...file }))) {
+      return NextResponse.json({ error: errorMessages.materials.fileNotFound }, { status: 404 });
+    }
+    return NextResponse.json({ data: { id: fileId } });
   }
 
   if (body.action === "delete-topic") {
