@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Chip, Stack } from "@mui/material";
+import { Box, Chip, Stack } from "@mui/material";
 import CancelIcon from "@mui/icons-material/CancelOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircleOutlined";
 import EventRepeatIcon from "@mui/icons-material/EventRepeatOutlined";
+import MenuBookIcon from "@mui/icons-material/MenuBookOutlined";
 import UndoIcon from "@mui/icons-material/UndoOutlined";
 import { api } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
@@ -15,6 +16,7 @@ import {
   lessonTimeRange,
   formatMoney,
 } from "@/lib/format";
+import { formatTopic } from "@/lib/nush";
 import {
   isMoved,
   lessonIncome,
@@ -28,6 +30,7 @@ import { FieldsDialog } from "@/components/FieldsDialog";
 import { IconAction, ItemRow } from "@/components/ItemRow";
 import type { Tone } from "@/components/tones";
 import { router } from "../router";
+import { LessonTopicDialog } from "./LessonTopicDialog";
 
 const PHASES: Record<LessonPhase, { tone: Tone; label: string }> = {
   held: { tone: "success", label: "Відбувся" },
@@ -48,6 +51,8 @@ type Props = {
 // One lesson of the month with the actions to mark, move, reset or delete it.
 export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Props) {
   const [moving, setMoving] = useState(false);
+  // Marking a lesson as held asks what was taught, so it shares the dialog with editing the topic.
+  const [topicDialog, setTopicDialog] = useState<"mark" | "edit" | null>(null);
   const [pending, setPending] = useState<LessonStatus | "reset" | null>(null);
   const phase = lessonPhase(lesson, now);
   const { tone, label } = PHASES[phase];
@@ -59,6 +64,15 @@ export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Pro
     await api(router.api.schedule, {
       method: "PATCH",
       body: { ...key, startsAt: kyivLocalToIso(values.startsAt) },
+      fallback: errorMessages.schedule.lessonSaveFailed,
+    });
+    await onReload();
+  };
+
+  const saveHeld = async (topicId: number | null) => {
+    await api(router.api.schedule, {
+      method: "PATCH",
+      body: { ...key, status: "held", topicId },
       fallback: errorMessages.schedule.lessonSaveFailed,
     });
     await onReload();
@@ -92,20 +106,38 @@ export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Pro
           {moved && <Chip component="span" size="small" variant="outlined" label="Перенесено" />}
         </Stack>
       }
-      secondary={`${weekday}, ${date} · ${lessonTimeRange(lesson.startsAt, lesson.durationMinutes)}${
-        phase === "cancelled" ? "" : ` · ${formatMoney(lessonIncome(lesson))}`
-      }`}
+      secondary={
+        <>
+          {`${weekday}, ${date} · ${lessonTimeRange(lesson.startsAt, lesson.durationMinutes)}${
+            phase === "cancelled" ? "" : ` · ${formatMoney(lessonIncome(lesson))}`
+          }`}
+          {lesson.topic && (
+            <Box component="span" sx={{ display: "block" }}>
+              {`Тема: ${formatTopic(lesson.topic)}`}
+            </Box>
+          )}
+        </>
+      }
       actions={
         <Stack direction="row" sx={{ flexShrink: 0 }}>
           {lesson.status === "planned" && (
             <IconAction
               label="Відбувся"
               color="success"
-              loading={pending === "held"}
               disabled={busy}
-              onClick={() => void track("held", () => onMark(lesson, "held"))}
+              onClick={() => setTopicDialog("mark")}
             >
               <CheckCircleIcon />
+            </IconAction>
+          )}
+          {lesson.status === "held" && (
+            <IconAction
+              label="Тема уроку"
+              color="info"
+              disabled={busy}
+              onClick={() => setTopicDialog("edit")}
+            >
+              <MenuBookIcon />
             </IconAction>
           )}
           {lesson.status !== "cancelled" && (
@@ -166,6 +198,16 @@ export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Pro
               ]}
               onSubmit={move}
               onClose={() => setMoving(false)}
+            />
+          )}
+          {topicDialog && (
+            <LessonTopicDialog
+              title={`${topicDialog === "mark" ? "Урок відбувся" : "Тема уроку"}: ${lesson.studentName}`}
+              submitLabel={topicDialog === "mark" ? "Відбувся" : "Зберегти"}
+              grade={lesson.studentGrade}
+              current={lesson.topic}
+              onSubmit={saveHeld}
+              onClose={() => setTopicDialog(null)}
             />
           )}
         </Stack>

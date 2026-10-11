@@ -56,17 +56,16 @@ export async function GET(request: Request) {
   const grade = searchParams.get("grade");
   const topicId = searchParams.get("topicId");
 
-  if (!grade) {
-    return NextResponse.json({ error: "Grade parameter required" }, { status: 400 });
-  }
-
-  const gradeNum = parseInt(grade, 10);
-  if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 11) {
-    return NextResponse.json({ error: "Invalid grade" }, { status: 400 });
+  const gradeNum = Number(grade);
+  if (!Number.isInteger(gradeNum) || gradeNum < 1 || gradeNum > 11) {
+    return NextResponse.json({ error: errorMessages.materials.invalidGrade }, { status: 400 });
   }
 
   if (topicId) {
-    const topicIdNum = parseInt(topicId, 10);
+    const topicIdNum = Number(topicId);
+    if (!Number.isInteger(topicIdNum) || topicIdNum < 1) {
+      return NextResponse.json({ error: errorMessages.common.invalidId }, { status: 400 });
+    }
     const materials = await getNushTopicMaterials(topicIdNum);
     return NextResponse.json({ data: materials });
   }
@@ -84,7 +83,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as PostBody | null;
 
   if (!body?.action) {
-    return NextResponse.json({ error: "Action required" }, { status: 400 });
+    return NextResponse.json({ error: errorMessages.materials.actionRequired }, { status: 400 });
   }
 
   if (body.action === "create-topic") {
@@ -92,8 +91,17 @@ export async function POST(request: Request) {
     const title = body.title?.trim();
     const description = body.description?.trim() ?? "";
 
-    if (!grade || grade < 1 || grade > 11 || !title) {
-      return NextResponse.json({ error: "Grade and title required" }, { status: 400 });
+    if (
+      typeof grade !== "number" ||
+      !Number.isInteger(grade) ||
+      grade < 1 ||
+      grade > 11 ||
+      !title
+    ) {
+      return NextResponse.json(
+        { error: errorMessages.materials.topicGradeAndTitleRequired },
+        { status: 400 },
+      );
     }
 
     const split = grade >= NUSH_SPLIT_GRADE;
@@ -111,7 +119,10 @@ export async function POST(request: Request) {
       });
       return NextResponse.json({ data: topic }, { status: 201 });
     } catch {
-      return NextResponse.json({ error: "Failed to create topic" }, { status: 500 });
+      return NextResponse.json(
+        { error: errorMessages.materials.topicCreateFailed },
+        { status: 500 },
+      );
     }
   }
 
@@ -119,30 +130,32 @@ export async function POST(request: Request) {
     const topicId = body.topicId;
     const name = body.material?.name?.trim();
     const url = body.material?.url?.trim();
-    const materialType = body.material?.materialType;
+    const materialType = MATERIAL_TYPES.find((type) => type === body.material?.materialType);
 
-    if (!topicId || !name || !url || !materialType || !isValidHttpUrl(url)) {
+    if (
+      typeof topicId !== "number" ||
+      !Number.isInteger(topicId) ||
+      !name ||
+      !url ||
+      !isValidHttpUrl(url)
+    ) {
       return NextResponse.json(
-        { error: "Topic ID, name, URL, and type required" },
+        { error: errorMessages.materials.topicMaterialRequired },
         { status: 400 },
       );
     }
-
-    const validTypes = ["google_drive", "naurok", "pdf", "doc", "link", "other"];
-    if (!validTypes.includes(materialType)) {
-      return NextResponse.json({ error: "Invalid material type" }, { status: 400 });
+    if (!materialType) {
+      return NextResponse.json({ error: errorMessages.materials.invalidType }, { status: 400 });
     }
 
     try {
-      const material = await addNushTopicMaterial({
-        topicId,
-        name,
-        url,
-        materialType: materialType as any,
-      });
+      const material = await addNushTopicMaterial({ topicId, name, url, materialType });
       return NextResponse.json({ data: material }, { status: 201 });
     } catch {
-      return NextResponse.json({ error: "Failed to add material" }, { status: 500 });
+      return NextResponse.json(
+        { error: errorMessages.materials.materialAddFailed },
+        { status: 500 },
+      );
     }
   }
 
@@ -202,14 +215,14 @@ export async function POST(request: Request) {
   if (body.action === "delete-material") {
     const materialId = body.materialId;
     if (!materialId) {
-      return NextResponse.json({ error: "Material ID required" }, { status: 400 });
+      return NextResponse.json({ error: errorMessages.common.invalidId }, { status: 400 });
     }
 
     try {
       await deleteNushTopicMaterial(materialId);
       return NextResponse.json({ success: true });
     } catch {
-      return NextResponse.json({ error: "Failed to delete material" }, { status: 500 });
+      return NextResponse.json({ error: errorMessages.materials.deleteFailed }, { status: 500 });
     }
   }
 
@@ -226,5 +239,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  return NextResponse.json({ error: errorMessages.common.unknownAction }, { status: 400 });
 }

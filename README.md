@@ -8,8 +8,9 @@ See [PRODUCT.md](PRODUCT.md) for scope and [DESIGN.md](DESIGN.md) for visual dir
 
 - Next.js 16 (App Router), React 19, TypeScript
 - Material UI v9; the theme is in `src/components/Providers.tsx`
-- Auth.js (NextAuth v5): Google for the teacher, email/password for students
+- Auth.js (NextAuth v5): Google or email/password for the teacher, email/password for students
 - Neon Postgres via `@neondatabase/serverless`; homework files are stored in the teacher's Google Drive
+- pdfmake renders the student PDF report on the server (Roboto font from the package, no external requests)
 
 ## Getting started
 

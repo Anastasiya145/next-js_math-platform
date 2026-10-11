@@ -19,9 +19,12 @@ import { PageSection } from "./PageSection";
 import { shade } from "./tones";
 
 const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("uk-UA", { day: "numeric", month: "short", year: "2-digit" }).format(
-    new Date(value),
-  );
+  new Intl.DateTimeFormat("uk-UA", {
+    timeZone: "Europe/Kyiv",
+    day: "numeric",
+    month: "short",
+    year: "2-digit",
+  }).format(new Date(value));
 
 export function ProgressChart({
   studentName,
@@ -48,7 +51,7 @@ export function ProgressChart({
         height={280}
         hideLegend
         aria-label={`Прогрес: ${studentName}`}
-        xAxis={[{ scaleType: "point", data: graded.map((point) => formatDate(point.submittedAt)) }]}
+        xAxis={[{ scaleType: "point", data: graded.map((point) => formatDate(point.lessonAt)) }]}
         yAxis={[{ min: 0, max: 12 }]}
         series={[
           {
@@ -76,8 +79,8 @@ export function ProgressChart({
             </TableHead>
             <TableBody>
               {points.map((point) => (
-                <TableRow key={`${point.homeworkId}-${point.submittedAt}`}>
-                  <TableCell>{formatDate(point.submittedAt)}</TableCell>
+                <TableRow key={`${point.homeworkId}-${point.lessonAt}`}>
+                  <TableCell>{formatDate(point.lessonAt)}</TableCell>
                   <TableCell>{point.title}</TableCell>
                   <TableCell>
                     {point.score === null

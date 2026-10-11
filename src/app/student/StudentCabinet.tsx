@@ -10,7 +10,7 @@ import MenuBookIcon from "@mui/icons-material/MenuBookOutlined";
 import StarIcon from "@mui/icons-material/StarOutlineRounded";
 import { api, useApi } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
-import { lessonParts } from "@/lib/format";
+import { homeworkTime, lessonParts } from "@/lib/format";
 import { AddAction } from "@/components/AddAction";
 import { AppShell } from "@/components/AppShell";
 import { PageSection } from "@/components/PageSection";
@@ -19,6 +19,7 @@ import { StatCard } from "@/components/StatCard";
 import type { Tone } from "@/components/tones";
 import { router } from "../router";
 import { HomeworkAssignmentCard } from "./HomeworkAssignmentCard";
+import { ReportAction } from "./ReportAction";
 import { StudentTextbookList } from "./StudentTextbookList";
 import type { StudentDashboardData, StudentHomeworkItem } from "./types";
 
@@ -36,12 +37,13 @@ export function StudentCabinet({ studentId }: Props) {
   const teacherView = Boolean(studentId);
 
   const homeworks = data?.homeworks ?? [];
-  const active = homeworks.filter((homework) => !homework.submission.status);
-  const activityAt = (homework: StudentHomeworkItem) =>
-    homework.submission.gradedAt ?? homework.submission.submittedAt ?? "";
+  // Open work: nearest date first. Finished work: latest date first.
+  const active = homeworks
+    .filter((homework) => !homework.submission.status)
+    .sort((first, second) => homeworkTime(first) - homeworkTime(second));
   const completed = homeworks
     .filter((homework) => homework.submission.status)
-    .sort((first, second) => activityAt(second).localeCompare(activityAt(first)));
+    .sort((first, second) => homeworkTime(second) - homeworkTime(first));
   const nextLesson = homeworks
     .filter((homework) => homework.nextLessonAt && !homework.submission.gradedAt)
     .sort((first, second) => first.nextLessonAt!.localeCompare(second.nextLessonAt!))[0];
@@ -85,9 +87,14 @@ export function StudentCabinet({ studentId }: Props) {
       }
       actions={
         teacherView && (
-          <Button startIcon={<ArrowBackIcon />} href={router.students}>
-            До списку
-          </Button>
+          <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+            <Button startIcon={<ArrowBackIcon />} href={router.students}>
+              До списку
+            </Button>
+            {studentId && data && (
+              <ReportAction studentId={studentId} studentName={data.student.name} />
+            )}
+          </Stack>
         )
       }
     >

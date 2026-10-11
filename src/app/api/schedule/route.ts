@@ -88,7 +88,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ data: { created: true } }, { status: 201 });
 }
 
-// Marks a lesson as held or cancelled, moves it to another time, or puts it back to planned.
+// Marks a lesson as held or cancelled, moves it to another time, puts it back to planned or sets its topic.
 export async function PATCH(request: Request) {
   if (!(await getTeacherUser())) return denied();
 
@@ -97,28 +97,35 @@ export async function PATCH(request: Request) {
     scheduledAt?: unknown;
     status?: unknown;
     startsAt?: unknown;
+    topicId?: unknown;
   } | null;
   const scheduledAt = toInstant(body?.scheduledAt);
   const startsAt = body?.startsAt === undefined ? undefined : toInstant(body.startsAt);
   const status = body?.status;
+  const topicId = body?.topicId;
   if (
     !isId(body?.studentId) ||
     !scheduledAt ||
     startsAt === null ||
     (status !== undefined && (typeof status !== "string" || !STATUSES.includes(status))) ||
-    (status === undefined && startsAt === undefined)
+    (topicId !== undefined && topicId !== null && !isId(topicId)) ||
+    (status === undefined && startsAt === undefined && topicId === undefined)
   ) {
     return NextResponse.json({ error: errorMessages.schedule.invalidLesson }, { status: 400 });
   }
 
-  const updated = await updateLesson({
+  const result = await updateLesson({
     studentId: body.studentId,
     scheduledAt,
     status: status as LessonStatus | undefined,
     startsAt,
+    topicId: topicId as number | null | undefined,
   });
-  if (!updated) {
+  if (result === "lessonNotFound") {
     return NextResponse.json({ error: errorMessages.schedule.lessonNotFound }, { status: 404 });
+  }
+  if (result === "topicNotFound") {
+    return NextResponse.json({ error: errorMessages.materials.topicNotFound }, { status: 404 });
   }
   return NextResponse.json({ data: { updated: true } });
 }

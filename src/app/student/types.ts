@@ -33,7 +33,7 @@ export type StudentDashboardData = {
   progress: Array<{
     homeworkId: number;
     title: string;
-    submittedAt: string;
+    lessonAt: string;
     status: "submitted" | "no_homework";
     score: number | null;
     gradedAt: string | null;

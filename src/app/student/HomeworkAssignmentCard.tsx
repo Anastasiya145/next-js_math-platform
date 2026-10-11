@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import EditIcon from "@mui/icons-material/EditOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { api, useAction } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
@@ -40,9 +41,13 @@ const isSameFile = (a: File, b: File) =>
 export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [selectionError, setSelectionError] = useState<string | null>(null);
-  const { busy, error, run } = useAction();
+  const { busy, error, run, reset } = useAction();
   const [pending, setPending] = useState<"upload" | "no-homework" | null>(null);
+  const [editing, setEditing] = useState(false);
   const { submission } = homework;
+  // A sent work stays editable until the teacher grades it.
+  const canEdit = !readOnly && Boolean(submission.status) && !submission.gradedAt;
+  const showPicker = !readOnly && (!submission.status || editing);
   const tone: Tone = submission.gradedAt
     ? "success"
     : submission.status === "submitted"
@@ -89,6 +94,13 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
     setSelectionError(null);
   };
 
+  const cancelEditing = () => {
+    setEditing(false);
+    setFiles([]);
+    setSelectionError(null);
+    reset();
+  };
+
   const upload = async () => {
     const body = new FormData();
     files.forEach((file) => body.append("file", file));
@@ -102,6 +114,7 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
       )
     ) {
       setFiles([]);
+      setEditing(false);
       await onChanged();
     }
   };
@@ -177,7 +190,12 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
               {error}
             </Alert>
           )}
-          {!readOnly && !submission.status && files.length > 0 && (
+          {editing && (
+            <Typography variant="body2" color="text.secondary">
+              Нові файли замінять надіслані раніше.
+            </Typography>
+          )}
+          {showPicker && files.length > 0 && (
             <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1, maxWidth: "100%" }}>
               {files.map((file) => (
                 <Chip
@@ -197,7 +215,14 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
           )}
         </Stack>
       </CardContent>
-      {!readOnly && !submission.status && (
+      {canEdit && !editing && (
+        <CardActions sx={{ px: 2, pb: 2 }}>
+          <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setEditing(true)}>
+            Змінити роботу
+          </Button>
+        </CardActions>
+      )}
+      {showPicker && (
         <CardActions sx={{ px: 2, pb: 2, flexWrap: "wrap", gap: 1 }}>
           <Button
             component="label"
@@ -223,20 +248,32 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
             disabled={files.length === 0 || busy}
             onClick={upload}
           >
-            {files.length > 1 ? `Надіслати роботу (${files.length})` : "Надіслати роботу"}
+            {editing
+              ? "Зберегти зміни"
+              : files.length > 1
+                ? `Надіслати роботу (${files.length})`
+                : "Надіслати роботу"}
           </Button>
-          <Typography variant="body2" color="text.secondary">
-            або
-          </Typography>
-          <Button
-            variant="outlined"
-            color="warning"
-            loading={busy && pending === "no-homework"}
-            disabled={busy}
-            onClick={noHomework}
-          >
-            Немає ДЗ · 0 балів
-          </Button>
+          {editing ? (
+            <Button variant="text" color="inherit" disabled={busy} onClick={cancelEditing}>
+              Скасувати
+            </Button>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                або
+              </Typography>
+              <Button
+                variant="outlined"
+                color="warning"
+                loading={busy && pending === "no-homework"}
+                disabled={busy}
+                onClick={noHomework}
+              >
+                Немає ДЗ · 0 балів
+              </Button>
+            </>
+          )}
         </CardActions>
       )}
     </Card>

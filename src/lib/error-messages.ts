@@ -25,12 +25,15 @@ export const errorMessages = {
     oauthSignin: "Не вдалося розпочати вхід через Google. Спробуйте ще раз.",
     credentialsSignin: "Неправильний email або пароль.",
     passwordChangeFailed: "Не вдалося змінити пароль.",
+    currentPasswordInvalid: "Поточний пароль введено неправильно.",
   },
   database: {
     urlMissing: "DATABASE_URL is not configured",
     studentCreateFailed: "Could not create student account",
     temporaryPasswordRequired: "A temporary password is required for a new account",
     driveFolderSaveFailed: "Could not save student Drive folder",
+    nushTopicCreateFailed: "Could not create NUSH topic",
+    nushMaterialAddFailed: "Could not add NUSH topic material",
     homeworkStudentRequired: "At least one student is required",
     homeworkStudentsMissing: "One or more students were not found",
   },
@@ -118,6 +121,14 @@ export const errorMessages = {
     invalidPayment: "перевірте учня, дату й суму оплати",
     notFound: "оплату не знайдено",
   },
+  report: {
+    generateFailed: "Не вдалося сформувати звіт",
+    invalidRange: "вкажіть коректний період (не більше 366 днів)",
+    fromRequired: "Вкажіть початок періоду.",
+    toRequired: "Вкажіть кінець періоду.",
+    rangeOrder: "Кінець періоду не може бути раніше за початок.",
+    rangeTooLong: "Період має бути не довшим за 366 днів.",
+  },
   drive: {
     reconnectRequired: "учитель має повторно підключити Google Drive",
     connectRequired:
@@ -153,6 +164,11 @@ export const errorMessages = {
     fileNotFound: "файл не знайдено",
     fileNameAndUrlRequired: "потрібні назва файлу та коректне посилання (http/https)",
     invalidType: "невідомий тип матеріалу",
+    invalidGrade: "вкажіть клас від 1 до 11",
+    topicGradeAndTitleRequired: "потрібні клас і назва теми",
+    topicCreateFailed: "Не вдалося створити тему",
+    topicMaterialRequired: "потрібні тема, назва файлу та коректне посилання (http/https)",
+    materialAddFailed: "Не вдалося додати матеріал",
   },
   textbooks: {
     loadFailed: "Не вдалося завантажити підручники",

@@ -35,17 +35,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // Check if this email belongs to the teacher (admin)
-        const adminEmail = "ivanovaanastasiya145@gmail.com";
-        const isTeacher = email === adminEmail;
-
         return {
           id: String(account.id),
           email: account.email,
           name: account.name,
-          role: isTeacher ? "teacher" : "student",
-          studentId: isTeacher ? undefined : account.id,
+          role: "student",
+          studentId: account.id,
         };
+      },
+    }),
+    Credentials({
+      id: "teacher-credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Пароль", type: "password" },
+      },
+      async authorize(credentials) {
+        const email =
+          typeof credentials.email === "string" ? credentials.email.trim().toLowerCase() : "";
+        const password = typeof credentials.password === "string" ? credentials.password : "";
+        if (validateEmail(email) || validatePassword(password)) return null;
+
+        const [{ findTeacherAccount }, { verifyPassword }] = await Promise.all([
+          import("@/lib/db"),
+          import("@/lib/passwords"),
+        ]);
+        const account = await findTeacherAccount(email);
+        if (!account || !verifyPassword(password, account.password_salt, account.password_hash)) {
+          return null;
+        }
+
+        return { id: account.email, email: account.email, name: account.name, role: "teacher" };
       },
     }),
   ],
@@ -58,10 +78,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Only the platform owner (admin) is allowed to sign in.
     async signIn({ user, account }) {
       if (account?.provider === "credentials") return user.role === "student";
-      if (account?.provider !== "google") return false;
       const adminEmail = "ivanovaanastasiya145@gmail.com";
       const userEmail = user.email?.trim().toLowerCase();
-      return Boolean(adminEmail && userEmail && adminEmail === userEmail);
+      const isAdmin = Boolean(adminEmail && userEmail && adminEmail === userEmail);
+      if (account?.provider === "teacher-credentials") return user.role === "teacher" && isAdmin;
+      if (account?.provider !== "google") return false;
+      return isAdmin;
     },
     async jwt({ token, user, account }) {
       if (user) {

@@ -29,6 +29,32 @@ export async function api<T = undefined>(
   return json.data as T;
 }
 
+// Saves a binary response (e.g. a PDF) as `filename`; a JSON error body becomes an ApiError.
+export async function downloadFile(
+  url: string,
+  filename: string,
+  fallback: string = errorMessages.common.actionFailed,
+): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch {
+    throw new ApiError(errorMessages.common.networkFailed);
+  }
+  if (!res.ok) {
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new ApiError(json.error ?? fallback);
+  }
+  const objectUrl = URL.createObjectURL(await res.blob());
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
 export function useApi<T>(url: string | null, fallback?: string) {
   const [state, setState] = useState<{ data: T | null; error: string | null; loading: boolean }>({
     data: null,
@@ -72,5 +98,5 @@ export function useAction() {
     }
   };
 
-  return { busy, error, run };
+  return { busy, error, run, reset: () => setError(null) };
 }

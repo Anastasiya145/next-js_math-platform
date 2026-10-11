@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Button, Chip, Stack, Tab, Tabs } from "@mui/material";
+import {
+  Box,
+  Button,
+  Chip,
+  Stack,
+  Tab,
+  Tabs,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import AssignmentIcon from "@mui/icons-material/AssignmentOutlined";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
@@ -13,6 +22,7 @@ import { PageSection } from "@/components/PageSection";
 import { router } from "../router";
 import { HomeworkCard } from "./HomeworkCard";
 import { HomeworkForm } from "./HomeworkForm";
+import { sortHomework, type HomeworkSort } from "./sort";
 import { pendingReviewCount } from "./status";
 import type { HomeworkStudentOption, TeacherHomework } from "./types";
 
@@ -56,6 +66,7 @@ export default function HomeworkPage() {
   );
   const [creating, setCreating] = useState(false);
   const [tab, setTab] = useState<TabKey | null>(null);
+  const [sort, setSort] = useState<HomeworkSort>("date");
   const items = homework.data ?? [];
   const review = items.filter((item) => pendingReviewCount(item) > 0);
   const completed = items.filter(
@@ -66,7 +77,8 @@ export default function HomeworkPage() {
   // Until the teacher picks a tab, open the one that needs attention first.
   const currentKey = tab ?? (review.length > 0 ? "review" : "active");
   const current = TABS.find((item) => item.key === currentKey) ?? TABS[1];
-  const works = groups[current.key];
+  // Open work goes nearest date first; finished work goes latest first.
+  const works = sortHomework(groups[current.key], sort, current.key === "completed");
 
   return (
     <AppShell
@@ -118,6 +130,18 @@ export default function HomeworkPage() {
             subtitle={students.data?.length === 0 ? "Спочатку додайте учнів" : undefined}
             icon={current.icon}
             tone={current.tone}
+            action={
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={sort}
+                onChange={(_, value: HomeworkSort | null) => value && setSort(value)}
+                aria-label="Сортування завдань"
+              >
+                <ToggleButton value="date">За датою</ToggleButton>
+                <ToggleButton value="student">За учнем</ToggleButton>
+              </ToggleButtonGroup>
+            }
             loading={homework.loading}
             error={homework.error ?? students.error}
             empty={works.length === 0}

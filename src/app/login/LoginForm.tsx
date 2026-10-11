@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   CardContent,
+  Divider,
   Stack,
   Tab,
   Tabs,
@@ -40,7 +41,7 @@ const signInErrors: Record<string, string> = {
   AccessDenied: errorMessages.auth.accessDenied,
 };
 
-function StudentLogin() {
+function PasswordLogin({ provider }: { provider: "credentials" | "teacher-credentials" }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,7 +56,7 @@ function StudentLogin() {
     setBusy(true);
     setError(null);
     try {
-      const result = await signIn("credentials", {
+      const result = await signIn(provider, {
         email: email.trim().toLowerCase(),
         password,
         redirect: false,
@@ -250,22 +251,26 @@ export function LoginForm({
               <Tab value="student" label="Учень" />
             </Tabs>
             {role === "teacher" ? (
-              <Button
-                fullWidth
-                size="large"
-                variant="outlined"
-                startIcon={<GoogleIcon />}
-                disabled={!googleLoginConfigured}
-                loading={googleBusy}
-                onClick={() => {
-                  setGoogleBusy(true);
-                  signIn("google", { redirectTo: router.home }).catch(() => setGoogleBusy(false));
-                }}
-              >
-                Вхід через Google
-              </Button>
+              <Stack spacing={2}>
+                <PasswordLogin key="teacher" provider="teacher-credentials" />
+                <Divider>або</Divider>
+                <Button
+                  fullWidth
+                  size="large"
+                  variant="outlined"
+                  startIcon={<GoogleIcon />}
+                  disabled={!googleLoginConfigured}
+                  loading={googleBusy}
+                  onClick={() => {
+                    setGoogleBusy(true);
+                    signIn("google", { redirectTo: router.home }).catch(() => setGoogleBusy(false));
+                  }}
+                >
+                  Вхід через Google
+                </Button>
+              </Stack>
             ) : (
-              <StudentLogin />
+              <PasswordLogin key="student" provider="credentials" />
             )}
           </CardContent>
         </Card>

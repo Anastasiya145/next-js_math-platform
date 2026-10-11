@@ -1,5 +1,7 @@
 // Browser-only wrapper around Google Picker (https://developers.google.com/drive/picker).
 
+import { errorMessages } from "@/lib/error-messages";
+
 type PickerCallbackData = { action: string; docs?: { id: string; name: string }[] };
 
 type DocsView = {
@@ -41,7 +43,7 @@ function loadPicker(): Promise<PickerApi> {
   pickerReady ??= new Promise<PickerApi>((resolve, reject) => {
     const fail = () => {
       pickerReady = null;
-      reject(new Error("Google Picker failed to load"));
+      reject(new Error(errorMessages.drive.pickerLoadFailed));
     };
     const loadApi = () =>
       window.gapi

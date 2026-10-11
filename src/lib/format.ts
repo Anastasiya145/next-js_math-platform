@@ -34,6 +34,13 @@ export const formatLesson = (value: string) => {
 export const formatDue = (nextLessonAt: string | null, dueAt: string | null) =>
   nextLessonAt ? formatLesson(nextLessonAt) : formatDateTime(dueAt);
 
+// Sort key matching formatDue; creation time covers work without any date.
+export const homeworkTime = (homework: {
+  nextLessonAt: string | null;
+  dueAt: string | null;
+  createdAt: string;
+}) => Date.parse(homework.nextLessonAt ?? homework.dueAt ?? homework.createdAt) || 0;
+
 const kyivFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "Europe/Kyiv",
   year: "numeric",

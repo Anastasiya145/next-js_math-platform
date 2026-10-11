@@ -10,6 +10,7 @@ import {
   type LessonRow,
   type LessonSlot,
   type LessonStatus,
+  type LessonTopic,
   type ScheduleData,
   type ScheduleStudent,
 } from "@/lib/schedule";
@@ -43,6 +44,11 @@ function toSubmissionFiles(value: unknown): SubmissionFile[] {
 function toDate(value: unknown): string | null {
   if (value == null) return null;
   return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+}
+
+function toLessonTopic(id: unknown, title: unknown, subject: unknown): LessonTopic | null {
+  if (typeof title !== "string" || typeof subject !== "string") return null;
+  return { id: id == null ? null : Number(id), title, subject: subject as NushSubject };
 }
 
 function mapStudent(row: DatabaseRow): Student {
@@ -133,7 +139,8 @@ export type HomeworkForTeacher = Omit<StudentHomework, "submission"> & {
 export type StudentProgressPoint = {
   homeworkId: number;
   title: string;
-  submittedAt: string;
+  // The lesson the homework was for: its next lesson, else the deadline, else the submission time.
+  lessonAt: string;
   status: "submitted" | "no_homework";
   score: number | null;
   gradedAt: string | null;
@@ -492,7 +499,7 @@ export async function listHomeworkForTeacher(): Promise<HomeworkForTeacher[]> {
         title: String(row.title),
         instructions: String(row.instructions ?? ""),
         resourceUrl: String(row.resourceUrl ?? ""),
-        dueAt: row.dueAt ? String(row.dueAt) : null,
+        dueAt: toTimestamp(row.dueAt),
         nextLessonAt: toTimestamp(row.nextLessonAt),
         createdAt: toTimestamp(row.createdAt) ?? "",
         isDemo: Boolean(row.isDemo),
@@ -653,7 +660,8 @@ export async function listLessons(range: {
     getDb()`
       SELECT student_id AS "studentId", scheduled_at AS "scheduledAt", starts_at AS "startsAt",
              duration_minutes AS "durationMinutes", status, is_extra AS "isExtra",
-             hourly_rate AS "hourlyRate"
+             hourly_rate AS "hourlyRate", topic_id AS "topicId", topic_title AS "topicTitle",
+             topic_subject AS "topicSubject"
       FROM lessons
       WHERE (starts_at >= ${rangeStart} AND starts_at < ${rangeEnd})
          OR (scheduled_at >= ${rangeStart} AND scheduled_at < ${rangeEnd})
@@ -667,6 +675,7 @@ export async function listLessons(range: {
     status: row.status as LessonStatus,
     isExtra: Boolean(row.isExtra),
     hourlyRate: Number(row.hourlyRate),
+    topic: toLessonTopic(row.topicId, row.topicTitle, row.topicSubject),
   }));
   return {
     students,
@@ -726,17 +735,19 @@ export async function setStudentSchedule(input: {
   return rows.length > 0;
 }
 
-// Marks a lesson, moves it (`startsAt`) or puts it back to planned. Returns false when no such lesson exists.
+// Marks a lesson, moves it (`startsAt`), puts it back to planned or sets what was taught (`topicId`, held lessons only).
 export async function updateLesson(input: {
   studentId: number;
   scheduledAt: string;
   status?: LessonStatus;
   startsAt?: string;
-}): Promise<boolean> {
+  topicId?: number | null;
+}): Promise<"updated" | "lessonNotFound" | "topicNotFound"> {
   const sql = getDb();
   const rows = (await sql`
     SELECT starts_at AS "startsAt", duration_minutes AS "durationMinutes", status,
-           is_extra AS "isExtra"
+           is_extra AS "isExtra", topic_id AS "topicId", topic_title AS "topicTitle",
+           topic_subject AS "topicSubject"
     FROM lessons
     WHERE student_id = ${input.studentId} AND scheduled_at = ${input.scheduledAt}
   `) as DatabaseRow[];
@@ -748,7 +759,7 @@ export async function updateLesson(input: {
   } else {
     const [student] = await listScheduleStudents([input.studentId]);
     const slot = student ? findSlotFor(student.slots, input.scheduledAt) : null;
-    if (!slot) return false;
+    if (!slot) return "lessonNotFound";
     durationMinutes = slot.durationMinutes;
   }
 
@@ -764,23 +775,44 @@ export async function updateLesson(input: {
       DELETE FROM lessons
       WHERE student_id = ${input.studentId} AND scheduled_at = ${input.scheduledAt}
     `;
-    return true;
+    return "updated";
+  }
+
+  // Only a held lesson has a topic. Leaving a held status drops it.
+  let topic: LessonTopic | null = null;
+  if (status === "held") {
+    if (input.topicId === undefined) {
+      topic =
+        existing?.status === "held"
+          ? toLessonTopic(existing.topicId, existing.topicTitle, existing.topicSubject)
+          : null;
+    } else if (input.topicId !== null) {
+      topic = await findLessonTopic(input.topicId);
+      if (!topic) return "topicNotFound";
+    }
   }
 
   await sql`
-    INSERT INTO lessons (student_id, scheduled_at, starts_at, duration_minutes, status, hourly_rate)
+    INSERT INTO lessons
+      (student_id, scheduled_at, starts_at, duration_minutes, status, hourly_rate,
+       topic_id, topic_title, topic_subject)
     SELECT ${input.studentId}::integer, ${input.scheduledAt}::timestamptz,
-           ${startsAt}::timestamptz, ${durationMinutes}::integer, ${status}::text, s.hourly_rate
+           ${startsAt}::timestamptz, ${durationMinutes}::integer, ${status}::text, s.hourly_rate,
+           ${topic?.id ?? null}::integer, ${topic?.title ?? null}::text,
+           ${topic?.subject ?? null}::text
     FROM students s WHERE s.id = ${input.studentId}
     ON CONFLICT (student_id, scheduled_at) DO UPDATE SET
       starts_at = EXCLUDED.starts_at,
       status = EXCLUDED.status,
+      topic_id = EXCLUDED.topic_id,
+      topic_title = EXCLUDED.topic_title,
+      topic_subject = EXCLUDED.topic_subject,
       hourly_rate = CASE
         WHEN lessons.status = 'held' AND EXCLUDED.status = 'held' THEN lessons.hourly_rate
         ELSE EXCLUDED.hourly_rate
       END
   `;
-  return true;
+  return "updated";
 }
 
 export async function createExtraLesson(input: {
@@ -913,17 +945,17 @@ export async function gradeHomework(input: {
 export async function getStudentProgress(studentId: number): Promise<StudentProgressPoint[]> {
   const rows = (await getDb()`
         SELECT h.id AS "homeworkId", h.title,
-          sub.submitted_at AS "submittedAt", sub.status, sub.score,
-          sub.graded_at AS "gradedAt"
+          COALESCE(h.next_lesson_at, h.due_at, sub.submitted_at) AS "lessonAt",
+          sub.status, sub.score, sub.graded_at AS "gradedAt"
     FROM homework_submissions sub
     JOIN homeworks h ON h.id = sub.homework_id
     WHERE sub.student_id = ${studentId}
-    ORDER BY sub.submitted_at ASC, h.id ASC
+    ORDER BY COALESCE(h.next_lesson_at, h.due_at, sub.submitted_at) ASC, h.id ASC
   `) as DatabaseRow[];
   return rows.map((row) => ({
     homeworkId: Number(row.homeworkId),
     title: String(row.title),
-    submittedAt: toTimestamp(row.submittedAt) ?? "",
+    lessonAt: toTimestamp(row.lessonAt) ?? "",
     status: row.status as StudentProgressPoint["status"],
     score: row.score == null ? null : Number(row.score),
     gradedAt: toTimestamp(row.gradedAt),
@@ -1034,6 +1066,13 @@ export async function listNushTopicsForGrade(grade: number): Promise<NushTopic[]
   return rows.map(toNushTopic);
 }
 
+async function findLessonTopic(topicId: number): Promise<LessonTopic | null> {
+  const rows = (await getDb()`
+    SELECT id, title, subject FROM nush_topics WHERE id = ${topicId}
+  `) as DatabaseRow[];
+  return rows[0] ? toLessonTopic(rows[0].id, rows[0].title, rows[0].subject) : null;
+}
+
 export async function createNushTopic(input: {
   grade: number;
   subject: NushSubject;
@@ -1047,7 +1086,7 @@ export async function createNushTopic(input: {
     RETURNING id, grade, subject, title, description
   `) as DatabaseRow[];
   const row = rows[0];
-  if (!row) throw new Error("Failed to create NUSH topic");
+  if (!row) throw new Error(errorMessages.database.nushTopicCreateFailed);
   return toNushTopic(row);
 }
 
@@ -1079,7 +1118,7 @@ export async function addNushTopicMaterial(input: {
     RETURNING id, topic_id, name, url, material_type
   `) as DatabaseRow[];
   const row = rows[0];
-  if (!row) throw new Error("Failed to add NUSH topic material");
+  if (!row) throw new Error(errorMessages.database.nushMaterialAddFailed);
   return {
     id: Number(row.id),
     topicId: Number(row.topic_id),
@@ -1297,72 +1336,27 @@ export async function updateMaterialFile(input: {
   return rows.length > 0;
 }
 
-// Student Textbooks
-
-export type PersonalStudentTextbook = {
-  id: number;
-  studentId: number;
-  title: string;
-  url: string;
-  subject: string;
+export type TeacherAccount = {
+  email: string;
+  name: string;
+  password_salt: string;
+  password_hash: string;
 };
 
-export async function getStudentTextbooks(studentId: number): Promise<PersonalStudentTextbook[]> {
+export async function findTeacherAccount(email: string): Promise<TeacherAccount | null> {
   const rows = (await getDb()`
-    SELECT id, student_id, title, url, subject
-    FROM student_textbooks
-    WHERE student_id = ${studentId}
-    ORDER BY subject ASC, created_at DESC
-  `) as DatabaseRow[];
-  return rows.map((row) => ({
-    id: Number(row.id),
-    studentId: Number(row.student_id),
-    title: String(row.title),
-    url: String(row.url),
-    subject: String(row.subject ?? ""),
-  }));
-}
-
-export async function addStudentTextbook(input: {
-  studentId: number;
-  title: string;
-  url: string;
-  subject?: string;
-}): Promise<PersonalStudentTextbook> {
-  const rows = (await getDb()`
-    INSERT INTO student_textbooks (student_id, title, url, subject)
-    VALUES (${input.studentId}, ${input.title}, ${input.url}, ${input.subject ?? ""})
-    RETURNING id, student_id, title, url, subject
+    SELECT email, name, password_salt, password_hash
+    FROM teacher_accounts
+    WHERE email = ${email.trim().toLowerCase()}
   `) as DatabaseRow[];
   const row = rows[0];
-  if (!row) throw new Error("Failed to add student textbook");
+  if (!row) return null;
   return {
-    id: Number(row.id),
-    studentId: Number(row.student_id),
-    title: String(row.title),
-    url: String(row.url),
-    subject: String(row.subject ?? ""),
+    email: String(row.email),
+    name: String(row.name),
+    password_salt: String(row.password_salt),
+    password_hash: String(row.password_hash),
   };
-}
-
-export async function deleteStudentTextbook(textbookId: number): Promise<void> {
-  await getDb()`DELETE FROM student_textbooks WHERE id = ${textbookId}`;
-}
-
-export async function updateStudentTextbook(input: {
-  studentId: number;
-  textbookId: number;
-  title: string;
-  url: string;
-  subject: string;
-}): Promise<boolean> {
-  const rows = (await getDb()`
-    UPDATE student_textbooks
-    SET title = ${input.title}, url = ${input.url}, subject = ${input.subject}
-    WHERE id = ${input.textbookId} AND student_id = ${input.studentId}
-    RETURNING id
-  `) as DatabaseRow[];
-  return rows.length > 0;
 }
 
 // Teacher Google Drive Tokens

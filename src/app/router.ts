@@ -10,9 +10,9 @@ export const router = {
   api: {
     students: "/api/students",
     student: (studentId: number) => `/api/students?id=${studentId}`,
-    studentTextbooks: (studentId: number) => `/api/students/${studentId}/textbooks`,
     studentDriveFolder: (studentId: number) => `/api/students/${studentId}/drive-folder`,
     studentSchedule: (studentId: number) => `/api/students/${studentId}/schedule`,
+    studentReport: (studentId: number) => `/api/students/${studentId}/report`,
     schedule: "/api/schedule",
     payments: "/api/payments",
     materials: "/api/materials",

@@ -1,4 +1,5 @@
 import { isoToKyivLocal, kyivLocalToIso } from "@/lib/format";
+import type { NushSubject } from "@/lib/nush";
 
 // Weekdays are ISO numbers (1 = Monday) and all slot times are Kyiv local time.
 export type LessonSlot = {
@@ -19,6 +20,9 @@ export type ScheduleStudent = {
 
 export type LessonStatus = "planned" | "held" | "cancelled";
 
+// What was taught at a held lesson, copied from the NUSH topic list.
+export type LessonTopic = { id: number | null; title: string; subject: NushSubject };
+
 // A lesson that was marked, moved or added by hand. `scheduledAt` is its stable key.
 export type LessonRow = {
   studentId: number;
@@ -28,9 +32,10 @@ export type LessonRow = {
   status: LessonStatus;
   isExtra: boolean;
   hourlyRate: number;
+  topic: LessonTopic | null;
 };
 
-export type Lesson = LessonRow & { studentName: string };
+export type Lesson = LessonRow & { studentName: string; studentGrade: number };
 
 export type ScheduleData = { students: ScheduleStudent[]; lessons: Lesson[] };
 
@@ -120,7 +125,12 @@ export function buildLessons(input: {
     if (!student || row.startsAt < rangeStart || row.startsAt >= rangeEnd) continue;
     // A held lesson keeps the rate it was held at.
     const hourlyRate = row.status === "held" ? row.hourlyRate : student.hourlyRate;
-    lessons.push({ ...row, studentName: student.name, hourlyRate });
+    lessons.push({
+      ...row,
+      studentName: student.name,
+      studentGrade: student.grade,
+      hourlyRate,
+    });
   }
 
   for (let date = input.from; date < input.to; date = addDays(date, 1)) {
@@ -134,12 +144,14 @@ export function buildLessons(input: {
         lessons.push({
           studentId: student.id,
           studentName: student.name,
+          studentGrade: student.grade,
           scheduledAt,
           startsAt: scheduledAt,
           durationMinutes: slot.durationMinutes,
           status: "planned",
           isExtra: false,
           hourlyRate: student.hourlyRate,
+          topic: null,
         });
       }
     }

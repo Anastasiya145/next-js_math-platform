@@ -17,7 +17,7 @@ export default function MaterialsPage() {
   const [tab, setTab] = useState(0);
 
   return (
-    <AppShell title="Матеріали" subtitle="Файли за класами, програма НУШ і підручники">
+    <AppShell title="Матеріали" subtitle="Програма НУШ і підручники">
       <Tabs
         value={tab}
         onChange={(_, value: number) => setTab(value)}

@@ -9,6 +9,7 @@ import { validatePassword } from "@/lib/validation";
 import { FormDialog } from "./FormDialog";
 
 export function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
+  const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
@@ -19,15 +20,22 @@ export function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
     <FormDialog
       title="Змінити пароль"
       submitLabel="Змінити"
-      submitDisabled={!password || Boolean(passwordError) || confirm !== password}
+      submitDisabled={!current || !password || Boolean(passwordError) || confirm !== password}
       onClose={onClose}
       onSubmit={() =>
         api(router.api.changePassword, {
-          body: { newPassword: password, confirmPassword: confirm },
+          body: { currentPassword: current, newPassword: password, confirmPassword: confirm },
           fallback: errorMessages.auth.passwordChangeFailed,
         })
       }
     >
+      <TextField
+        type="password"
+        label="Поточний пароль"
+        autoComplete="current-password"
+        value={current}
+        onChange={(event) => setCurrent(event.target.value)}
+      />
       <TextField
         type="password"
         label="Новий пароль"
