@@ -24,7 +24,7 @@ import {
   validateEmail,
   validatePassword,
 } from "@/lib/validation";
-import { glass, glow, shade } from "@/components/tones";
+import { glass, glow, gradientOf, shade } from "@/components/tones";
 
 const MATH_SYMBOLS = [
   { symbol: "π", top: "8%", right: "12%", size: 96 },
@@ -158,22 +158,31 @@ export function LoginForm({
             {symbol}
           </Typography>
         ))}
-        <Box
-          sx={{
-            position: "relative",
-            display: "grid",
-            placeItems: "center",
-            width: 96,
-            height: 96,
-            mb: 3,
-            borderRadius: "28px",
-            bgcolor: glass(22),
-            boxShadow: glow("secondary", 80),
-            backdropFilter: "blur(6px)",
-          }}
+        <Stack
+          direction="row"
+          spacing={2.5}
+          sx={{ position: "relative", alignItems: "center", mb: 3 }}
         >
-          <FunctionsIcon sx={{ fontSize: 56 }} />
-        </Box>
+          <Box
+            sx={{
+              display: "grid",
+              placeItems: "center",
+              width: 96,
+              height: 96,
+              flexShrink: 0,
+              borderRadius: "28px",
+              bgcolor: glass(22),
+              boxShadow: glow("secondary", 80),
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            <FunctionsIcon sx={{ fontSize: 56 }} />
+          </Box>
+          <Typography variant="h4" component="p" sx={{ fontWeight: 700 }}>
+            Математика
+            <br />з Анастасією
+          </Typography>
+        </Stack>
         <Typography variant="h2" component="h1" sx={{ position: "relative", fontWeight: 700 }}>
           Твій простір для науки
         </Typography>
@@ -185,7 +194,42 @@ export function LoginForm({
           одному місці.
         </Typography>
       </Box>
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", p: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 3,
+          p: 3,
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ display: { xs: "flex", md: "none" }, alignItems: "center" }}
+        >
+          <Box
+            sx={{
+              display: "grid",
+              placeItems: "center",
+              width: 44,
+              height: 44,
+              borderRadius: "14px",
+              color: "primary.contrastText",
+              background: gradientOf("primary"),
+              boxShadow: glow("primary", 70),
+            }}
+          >
+            <FunctionsIcon />
+          </Box>
+          <Typography variant="h6" component="p">
+            Математика{" "}
+            <Box component="span" sx={{ color: "secondary.main" }}>
+              з Анастасією
+            </Box>
+          </Typography>
+        </Stack>
         <Card sx={{ width: "100%", maxWidth: 420 }}>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h5" component="h2" gutterBottom>
