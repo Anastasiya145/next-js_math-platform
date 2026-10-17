@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { signIn } from "next-auth/react";
 import {
   Alert,
@@ -12,20 +12,27 @@ import {
   Stack,
   Tab,
   Tabs,
-  TextField,
   Typography,
 } from "@mui/material";
-import FunctionsIcon from "@mui/icons-material/Functions";
 import GoogleIcon from "@mui/icons-material/Google";
 import { router } from "@/app/router";
 import { errorMessages } from "@/lib/error-messages";
 import {
-  MAX_EMAIL_LENGTH,
   MAX_PASSWORD_LENGTH,
   validateEmail,
   validatePassword,
 } from "@/lib/validation";
-import { glass, glow, gradientOf, shade } from "@/components/tones";
+import { glass, shade } from "@/components/tones";
+import { PasswordField } from "@/components/PasswordField";
+import { EmailField } from "@/components/EmailField";
+import { SiteLogo } from "@/components/SiteLogo";
+import {
+  translate,
+  translateError,
+  type TranslationKey,
+} from "@/lib/language-messages";
+import type { AppLocale, SiteType } from "@/lib/languages";
+import { siteVariant } from "@/lib/site-variant";
 
 const MATH_SYMBOLS = [
   { symbol: "π", top: "8%", right: "12%", size: 96 },
@@ -41,7 +48,17 @@ const signInErrors: Record<string, string> = {
   AccessDenied: errorMessages.auth.accessDenied,
 };
 
-function PasswordLogin({ provider }: { provider: "credentials" | "teacher-credentials" }) {
+function PasswordLogin({
+  provider,
+  siteType,
+  uiLanguage,
+  locale,
+}: {
+  provider: "credentials" | "teacher-credentials";
+  siteType?: SiteType;
+  uiLanguage: AppLocale;
+  locale: AppLocale;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,7 +66,8 @@ function PasswordLogin({ provider }: { provider: "credentials" | "teacher-creden
 
   const emailError = email.trim() ? validateEmail(email) : null;
   const passwordError = password ? validatePassword(password) : null;
-  const valid = Boolean(email.trim() && password) && !emailError && !passwordError;
+  const valid =
+    Boolean(email.trim() && password) && !emailError && !passwordError;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -59,12 +77,19 @@ function PasswordLogin({ provider }: { provider: "credentials" | "teacher-creden
       const result = await signIn(provider, {
         email: email.trim().toLowerCase(),
         password,
+        ...(siteType ? { siteType, uiLanguage } : {}),
         redirect: false,
       });
-      if (result?.error) setError(signInErrors[result.error] ?? errorMessages.auth.loginFailed);
-      else window.location.href = router.home;
+      if (result?.error) {
+        setError(
+          translateError(
+            signInErrors[result.error] ?? errorMessages.auth.loginFailed,
+            locale,
+          ),
+        );
+      } else window.location.href = router.home;
     } catch {
-      setError(errorMessages.common.networkFailed);
+      setError(translateError(errorMessages.common.networkFailed, locale));
     } finally {
       setBusy(false);
     }
@@ -73,28 +98,34 @@ function PasswordLogin({ provider }: { provider: "credentials" | "teacher-creden
   return (
     <Stack component="form" spacing={2} onSubmit={handleSubmit}>
       {error && <Alert severity="error">{error}</Alert>}
-      <TextField
-        label="Email"
-        type="email"
+      <EmailField
+        label={translate(locale, "emailLabel")}
         autoComplete="username"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
-        slotProps={{ htmlInput: { maxLength: MAX_EMAIL_LENGTH } }}
         error={Boolean(emailError)}
-        helperText={emailError}
+        helperText={emailError ? translateError(emailError, locale) : undefined}
       />
-      <TextField
-        label="Пароль"
-        type="password"
+      <PasswordField
+        locale={locale}
+        label={translate(locale, "passwordLabel")}
         autoComplete="current-password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         slotProps={{ htmlInput: { maxLength: MAX_PASSWORD_LENGTH } }}
         error={Boolean(passwordError)}
-        helperText={passwordError}
+        helperText={
+          passwordError ? translateError(passwordError, locale) : undefined
+        }
       />
-      <Button type="submit" variant="contained" size="large" loading={busy} disabled={!valid}>
-        Увійти
+      <Button
+        type="submit"
+        variant="contained"
+        size="large"
+        loading={busy}
+        disabled={!valid}
+      >
+        {translate(locale, "signIn")}
       </Button>
     </Stack>
   );
@@ -107,11 +138,31 @@ export function LoginForm({
   googleLoginConfigured: boolean;
   message: string | null;
 }) {
-  const [role, setRole] = useState<"teacher" | "student">("teacher");
+  const [role, setRole] = useState<"teacher" | "student">(
+    siteVariant === "languages" ? "student" : "teacher",
+  );
+  const [studentLanguage, setStudentLanguage] = useState<AppLocale>("fr");
   const [googleBusy, setGoogleBusy] = useState(false);
+  const locale: AppLocale =
+    siteVariant === "languages" ? studentLanguage : "uk";
+  const languageSite = siteVariant === "languages";
+  const t = (key: TranslationKey) => translate(locale, key);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.title = languageSite
+      ? translate(locale, "languageBrand")
+      : "Математика з Анастасією";
+  }, [locale, languageSite]);
 
   return (
-    <Box sx={{ display: "grid", minHeight: "100vh", gridTemplateColumns: { md: "1fr 1fr" } }}>
+    <Box
+      sx={{
+        display: "grid",
+        minHeight: "100vh",
+        gridTemplateColumns: { md: "1fr 1fr" },
+      }}
+    >
       <Box
         sx={{
           position: "relative",
@@ -144,55 +195,39 @@ export function LoginForm({
           },
         }}
       >
-        {MATH_SYMBOLS.map(({ symbol, size, ...position }) => (
-          <Typography
-            key={symbol}
-            aria-hidden
-            sx={{
-              position: "absolute",
-              fontSize: size,
-              fontWeight: 700,
-              color: glass(22),
-              ...position,
-            }}
-          >
-            {symbol}
-          </Typography>
-        ))}
-        <Stack
-          direction="row"
-          spacing={2.5}
-          sx={{ position: "relative", alignItems: "center", mb: 3 }}
+        {!languageSite &&
+          MATH_SYMBOLS.map(({ symbol, size, ...position }) => (
+            <Typography
+              key={symbol}
+              aria-hidden
+              sx={{
+                position: "absolute",
+                fontSize: size,
+                fontWeight: 700,
+                color: glass(22),
+                ...position,
+              }}
+            >
+              {symbol}
+            </Typography>
+          ))}
+        <SiteLogo
+          size="hero"
+          locale={locale}
+          sx={{ position: "relative", mb: 3 }}
+        />
+        <Typography
+          variant="h2"
+          component="h1"
+          sx={{ position: "relative", fontWeight: 700 }}
         >
-          <Box
-            sx={{
-              display: "grid",
-              placeItems: "center",
-              width: 96,
-              height: 96,
-              flexShrink: 0,
-              borderRadius: "28px",
-              bgcolor: glass(22),
-              boxShadow: glow("secondary", 80),
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            <FunctionsIcon sx={{ fontSize: 56 }} />
-          </Box>
-          <Typography variant="h4" component="p" sx={{ fontWeight: 700 }}>
-            Математика
-            <br />з Анастасією
-          </Typography>
-        </Stack>
-        <Typography variant="h2" component="h1" sx={{ position: "relative", fontWeight: 700 }}>
-          Твій простір для науки
+          {languageSite ? t("languageLoginHeadline") : t("loginHeadline")}
         </Typography>
         <Typography
           variant="h6"
           sx={{ position: "relative", mt: 2, opacity: 0.9, fontWeight: 400 }}
         >
-          Персональний кабінет для розвитку математичних навичок. Матеріали, завдання, прогрес в
-          одному місці.
+          {languageSite ? t("languageLoginDescription") : t("loginDescription")}
         </Typography>
       </Box>
       <Box
@@ -205,55 +240,64 @@ export function LoginForm({
           p: 3,
         }}
       >
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{ display: { xs: "flex", md: "none" }, alignItems: "center" }}
-        >
-          <Box
-            sx={{
-              display: "grid",
-              placeItems: "center",
-              width: 44,
-              height: 44,
-              borderRadius: "14px",
-              color: "primary.contrastText",
-              background: gradientOf("primary"),
-              boxShadow: glow("primary", 70),
-            }}
-          >
-            <FunctionsIcon />
-          </Box>
-          <Typography variant="h6" component="p">
-            Математика{" "}
-            <Box component="span" sx={{ color: "secondary.main" }}>
-              з Анастасією
-            </Box>
-          </Typography>
-        </Stack>
+        <SiteLogo
+          size="compact"
+          locale={locale}
+          sx={{ display: { xs: "flex", md: "none" } }}
+        />
         <Card sx={{ width: "100%", maxWidth: 420 }}>
           <CardContent sx={{ p: 4 }}>
             <Typography variant="h5" component="h2" gutterBottom>
-              Вхід до кабінету
+              {t("loginHeading")}
             </Typography>
-            {message && (
+            {message && role === "teacher" && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                {message}
+                {translateError(message, locale)}
               </Alert>
             )}
-            <Tabs
-              value={role}
-              onChange={(_, value) => setRole(value)}
-              variant="fullWidth"
-              sx={{ mb: 3 }}
-            >
-              <Tab value="teacher" label="Вчитель" />
-              <Tab value="student" label="Учень" />
-            </Tabs>
+            {siteVariant === "math" ? (
+              <Tabs
+                value={role}
+                onChange={(_, value: "teacher" | "student") => setRole(value)}
+                variant="fullWidth"
+                sx={{ mb: 3 }}
+              >
+                <Tab value="teacher" label={t("teacherRole")} />
+                <Tab value="student" label={t("studentRole")} />
+              </Tabs>
+            ) : (
+              <Stack spacing={1.5} sx={{ mb: 2, alignItems: "flex-end" }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ alignSelf: "flex-start" }}
+                >
+                  {t("studentRole")}
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  aria-label={
+                    locale === "fr" ? t("switchToRu") : t("switchToFr")
+                  }
+                  onClick={() =>
+                    setStudentLanguage(locale === "fr" ? "ru" : "fr")
+                  }
+                  sx={{ minHeight: 40 }}
+                >
+                  {locale === "fr" ? "RU" : "FR"}
+                </Button>
+              </Stack>
+            )}
             {role === "teacher" ? (
               <Stack spacing={2}>
-                <PasswordLogin key="teacher" provider="teacher-credentials" />
-                <Divider>або</Divider>
+                <PasswordLogin
+                  key="teacher"
+                  provider="teacher-credentials"
+                  locale="uk"
+                  uiLanguage="uk"
+                />
+                <Divider>{t("or")}</Divider>
                 <Button
                   fullWidth
                   size="large"
@@ -263,14 +307,22 @@ export function LoginForm({
                   loading={googleBusy}
                   onClick={() => {
                     setGoogleBusy(true);
-                    signIn("google", { redirectTo: router.home }).catch(() => setGoogleBusy(false));
+                    signIn("google", { redirectTo: router.home }).catch(() =>
+                      setGoogleBusy(false),
+                    );
                   }}
                 >
-                  Вхід через Google
+                  {t("googleSignIn")}
                 </Button>
               </Stack>
             ) : (
-              <PasswordLogin key="student" provider="credentials" />
+              <PasswordLogin
+                key={`student-${siteVariant}`}
+                provider="credentials"
+                siteType={siteVariant}
+                uiLanguage={locale}
+                locale={locale}
+              />
             )}
           </CardContent>
         </Card>

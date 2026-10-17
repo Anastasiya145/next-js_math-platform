@@ -11,6 +11,7 @@ import {
   Stack,
 } from "@mui/material";
 import { errorText } from "@/lib/api";
+import { useAppLanguage } from "@/lib/LanguageProvider";
 
 type FormDialogProps = {
   title: string;
@@ -31,6 +32,7 @@ export function FormDialog({
   onClose,
   children,
 }: FormDialogProps) {
+  const { locale, t } = useAppLanguage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +44,7 @@ export function FormDialog({
       await onSubmit();
       onClose();
     } catch (err) {
-      setError(errorText(err));
+      setError(errorText(err, locale));
     } finally {
       setBusy(false);
     }
@@ -64,10 +66,20 @@ export function FormDialog({
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button variant="outlined" color="inherit" onClick={onClose} disabled={busy}>
-          Скасувати
+        <Button
+          variant="outlined"
+          color="inherit"
+          onClick={onClose}
+          disabled={busy}
+        >
+          {t("cancel")}
         </Button>
-        <Button type="submit" variant="contained" loading={busy} disabled={submitDisabled}>
+        <Button
+          type="submit"
+          variant="contained"
+          loading={busy}
+          disabled={submitDisabled}
+        >
           {submitLabel}
         </Button>
       </DialogActions>

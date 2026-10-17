@@ -22,17 +22,21 @@ import { HomeworkAssignmentCard } from "./HomeworkAssignmentCard";
 import { ReportAction } from "./ReportAction";
 import { StudentTextbookList } from "./StudentTextbookList";
 import type { StudentDashboardData, StudentHomeworkItem } from "./types";
+import { useAppLanguage } from "@/lib/LanguageProvider";
 
 type Props = { studentId?: number };
 
 // The student's own cabinet, or the same view for the teacher when `studentId` is given.
 export function StudentCabinet({ studentId }: Props) {
+  const { locale, siteType, baseLanguage, targetLanguage, t } =
+    useAppLanguage();
   const url = studentId
     ? `${router.api.studentDashboard}?studentId=${studentId}`
     : router.api.studentDashboard;
   const { data, error, loading, reload } = useApi<StudentDashboardData>(
     url,
-    errorMessages.studentDashboard.loadFailed,
+    t("errorDashboard"),
+    locale,
   );
   const teacherView = Boolean(studentId);
 
@@ -45,9 +49,15 @@ export function StudentCabinet({ studentId }: Props) {
     .filter((homework) => homework.submission.status)
     .sort((first, second) => homeworkTime(second) - homeworkTime(first));
   const nextLesson = homeworks
-    .filter((homework) => homework.nextLessonAt && !homework.submission.gradedAt)
-    .sort((first, second) => first.nextLessonAt!.localeCompare(second.nextLessonAt!))[0];
-  const lesson = nextLesson ? lessonParts(nextLesson.nextLessonAt!) : null;
+    .filter(
+      (homework) => homework.nextLessonAt && !homework.submission.gradedAt,
+    )
+    .sort((first, second) =>
+      first.nextLessonAt!.localeCompare(second.nextLessonAt!),
+    )[0];
+  const lesson = nextLesson
+    ? lessonParts(nextLesson.nextLessonAt!, locale)
+    : null;
 
   const homeworkSection = (
     title: string,
@@ -79,10 +89,21 @@ export function StudentCabinet({ studentId }: Props) {
 
   return (
     <AppShell
-      title={teacherView ? (data?.student.name ?? "Учень") : "Навчальний простір"}
+      title={
+        teacherView
+          ? (data?.student.name ?? t("studentFallback"))
+          : t("portalTitle")
+      }
       subtitle={
         data
-          ? `${data.student.grade} клас${teacherView ? " · перегляд кабінету учня" : " · кабінет учня"}`
+          ? siteType === "languages" && baseLanguage && targetLanguage
+            ? t("languagePair", {
+                base: t(baseLanguage === "fr" ? "french" : "russian"),
+                target: t(targetLanguage === "fr" ? "french" : "russian"),
+              })
+            : `${t("gradeLabel", { grade: data.student.grade })} · ${t(
+                teacherView ? "teacherCabinetSuffix" : "studentCabinetSuffix",
+              )}`
           : undefined
       }
       actions={
@@ -92,25 +113,32 @@ export function StudentCabinet({ studentId }: Props) {
               До списку
             </Button>
             {studentId && data && (
-              <ReportAction studentId={studentId} studentName={data.student.name} />
+              <ReportAction
+                studentId={studentId}
+                studentName={data.student.name}
+              />
             )}
           </Stack>
         )
       }
     >
       {loading || error || !data ? (
-        <PageSection title="Кабінет" loading={loading} error={error} />
+        <PageSection title={t("cabinet")} loading={loading} error={error} />
       ) : (
         <Stack spacing={2}>
           <Grid container spacing={2}>
             <Grid size={{ xs: 6, md: 4 }}>
               <StatCard
-                label="Середній бал"
-                value={data.averageScore === null ? "—" : `${data.averageScore.toFixed(1)}/12`}
+                label={t("averageScore")}
+                value={
+                  data.averageScore === null
+                    ? "—"
+                    : `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(data.averageScore)}/12`
+                }
                 hint={
                   data.gradedCount
-                    ? `${data.gradedCount} оцінених робіт`
-                    : "Ще немає оцінених робіт"
+                    ? `${data.gradedCount} ${t("gradedWorks")}`
+                    : t("noGradedWorks")
                 }
                 icon={<StarIcon />}
                 tone="success"
@@ -118,26 +146,30 @@ export function StudentCabinet({ studentId }: Props) {
             </Grid>
             <Grid size={{ xs: 6, md: 4 }}>
               <StatCard
-                label="Потрібно виконати"
+                label={t("activeWorksCount")}
                 value={active.length}
-                hint="домашніх робіт"
+                hint={t("homework")}
                 icon={<AssignmentLateIcon />}
                 tone="warning"
               />
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
               <StatCard
-                label="Наступний урок"
+                label={t("nextLesson")}
                 value={lesson ? `${lesson.date}, ${lesson.time}` : "—"}
-                hint={lesson ? `${lesson.weekday} · ${nextLesson?.title}` : undefined}
+                hint={
+                  lesson
+                    ? `${lesson.weekday} · ${nextLesson?.title}`
+                    : undefined
+                }
                 icon={<EventIcon />}
                 tone="info"
               />
             </Grid>
           </Grid>
           <PageSection
-            title="Доступні підручники"
-            subtitle={`Для ${data.student.grade} класу`}
+            title={t("textbooks")}
+            subtitle={t("forGrade", { grade: data.student.grade })}
             icon={<MenuBookIcon />}
             tone="success"
             action={
@@ -147,15 +179,25 @@ export function StudentCabinet({ studentId }: Props) {
                   color="success"
                   title={`Новий підручник для ${data.student.grade} класу`}
                   fields={[
-                    { name: "title", label: "Назва підручника", maxLength: 180 },
+                    {
+                      name: "title",
+                      label: "Назва підручника",
+                      maxLength: 180,
+                    },
                     { name: "url", label: "Посилання", type: "url" },
                     {
                       name: "subject",
                       label: "Предмет",
                       maxLength: 80,
-                      defaultValue: data.student.grade <= 6 ? "Математика" : "Алгебра",
+                      defaultValue:
+                        data.student.grade <= 6 ? "Математика" : "Алгебра",
                     },
-                    { name: "author", label: "Автор", optional: true, maxLength: 160 },
+                    {
+                      name: "author",
+                      label: "Автор",
+                      optional: true,
+                      maxLength: 160,
+                    },
                   ]}
                   onSubmit={async (values) => {
                     // Grade-wide on purpose: it joins the class library and every student of the grade sees it.
@@ -173,25 +215,28 @@ export function StudentCabinet({ studentId }: Props) {
               )
             }
             empty={data.textbooks.length === 0}
-            emptyText={`Підручники для ${data.student.grade} класу ще не додані.`}
+            emptyText={t("textbooksEmpty", { grade: data.student.grade })}
           >
             <StudentTextbookList textbooks={data.textbooks} />
           </PageSection>
           {homeworkSection(
-            "Актуальна домашня робота",
+            t("currentHomework"),
             active,
-            "Усе виконано. Нова робота з'явиться тут.",
+            t("allDone"),
             <AssignmentLateIcon />,
             "warning",
           )}
           {homeworkSection(
-            "Завершені роботи",
+            t("completedWorks"),
             completed,
-            "Надіслані й перевірені роботи з'являться тут.",
+            t("completedEmpty"),
             <AssignmentTurnedInIcon />,
             "success",
           )}
-          <ProgressChart studentName={data.student.name} points={data.progress} />
+          <ProgressChart
+            studentName={data.student.name}
+            points={data.progress}
+          />
         </Stack>
       )}
     </AppShell>

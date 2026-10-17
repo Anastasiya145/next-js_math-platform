@@ -1,3 +1,5 @@
+import { isIntegerInRange } from "@/lib/validation";
+
 export const MAX_PAYMENT_AMOUNT = 1_000_000;
 export const MAX_PAYMENT_NOTE_LENGTH = 200;
 
@@ -22,4 +24,4 @@ export type Payment = {
 export type PaymentsData = { balances: PaymentBalance[]; payments: Payment[] };
 
 export const isPaymentAmount = (value: unknown): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= MAX_PAYMENT_AMOUNT;
+  isIntegerInRange(value, 1, MAX_PAYMENT_AMOUNT);

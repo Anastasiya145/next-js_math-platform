@@ -5,6 +5,7 @@ import type { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
+import { LanguageProvider } from "@/lib/LanguageProvider";
 import { gradientOf, tint, type Tone } from "./tones";
 
 type Swatch = [light: string, main: string, dark: string];
@@ -15,7 +16,10 @@ const tones = (palette: Record<Tone, Swatch>) =>
       tone,
       { light, main, dark, contrastText: "#fff" },
     ]),
-  ) as Record<Tone, { light: string; main: string; dark: string; contrastText: string }>;
+  ) as Record<
+    Tone,
+    { light: string; main: string; dark: string; contrastText: string }
+  >;
 
 const theme = createTheme({
   cssVariables: { colorSchemeSelector: "media" },
@@ -115,7 +119,11 @@ const theme = createTheme({
     },
     MuiTabs: {
       styleOverrides: {
-        indicator: { height: 4, borderRadius: 4, background: gradientOf("primary") },
+        indicator: {
+          height: 4,
+          borderRadius: 4,
+          background: gradientOf("primary"),
+        },
       },
     },
     MuiTab: { styleOverrides: { root: { fontWeight: 600 } } },
@@ -156,18 +164,28 @@ const theme = createTheme({
     MuiPopover: { styleOverrides: { paper: { borderRadius: 16 } } },
     MuiOutlinedInput: {
       styleOverrides: {
-        root: { "&.Mui-focused": { boxShadow: `0 0 0 4px ${tint("primary", 16)}` } },
+        root: {
+          "&.Mui-focused": { boxShadow: `0 0 0 4px ${tint("primary", 16)}` },
+        },
       },
     },
   },
 });
 
-export function Providers({ children, session }: { children: ReactNode; session: Session | null }) {
+export function Providers({
+  children,
+  session,
+}: {
+  children: ReactNode;
+  session: Session | null;
+}) {
   return (
     <AppRouterCacheProvider>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <SessionProvider session={session}>{children}</SessionProvider>
+        <SessionProvider session={session}>
+          <LanguageProvider session={session}>{children}</LanguageProvider>
+        </SessionProvider>
       </ThemeProvider>
     </AppRouterCacheProvider>
   );

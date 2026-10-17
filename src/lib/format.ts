@@ -1,13 +1,29 @@
-export const formatDateTime = (value: string | null) =>
+import type { AppLocale } from "@/lib/languages";
+
+const intlLocales: Record<AppLocale, string> = {
+  uk: "uk-UA",
+  fr: "fr-FR",
+  ru: "ru-RU",
+};
+
+export const formatDateTime = (
+  value: string | null,
+  locale: AppLocale = "uk",
+) =>
   value
-    ? new Intl.DateTimeFormat("uk-UA", { dateStyle: "medium", timeStyle: "short" }).format(
-        new Date(value),
-      )
-    : "Без терміну";
+    ? new Intl.DateTimeFormat(intlLocales[locale], {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(value))
+    : locale === "fr"
+      ? "Sans échéance"
+      : locale === "ru"
+        ? "Без срока"
+        : "Без терміну";
 
 // Lessons are shown in Kyiv time so server and browser render the same text.
-export const lessonParts = (value: string) => {
-  const parts = new Intl.DateTimeFormat("uk-UA", {
+export const lessonParts = (value: string, locale: AppLocale = "uk") => {
+  const parts = new Intl.DateTimeFormat(intlLocales[locale], {
     timeZone: "Europe/Kyiv",
     weekday: "long",
     day: "numeric",
@@ -25,21 +41,29 @@ export const lessonParts = (value: string) => {
   };
 };
 
-export const formatLesson = (value: string) => {
-  const { weekday, date, time } = lessonParts(value);
+export const formatLesson = (value: string, locale: AppLocale = "uk") => {
+  const { weekday, date, time } = lessonParts(value, locale);
   return `${weekday}, ${date}, ${time}`;
 };
 
 // Homework is due at the teacher's next lesson; the plain due date is only a fallback.
-export const formatDue = (nextLessonAt: string | null, dueAt: string | null) =>
-  nextLessonAt ? formatLesson(nextLessonAt) : formatDateTime(dueAt);
+export const formatDue = (
+  nextLessonAt: string | null,
+  dueAt: string | null,
+  locale: AppLocale = "uk",
+) =>
+  nextLessonAt
+    ? formatLesson(nextLessonAt, locale)
+    : formatDateTime(dueAt, locale);
 
 // Sort key matching formatDue; creation time covers work without any date.
 export const homeworkTime = (homework: {
   nextLessonAt: string | null;
   dueAt: string | null;
   createdAt: string;
-}) => Date.parse(homework.nextLessonAt ?? homework.dueAt ?? homework.createdAt) || 0;
+}) =>
+  Date.parse(homework.nextLessonAt ?? homework.dueAt ?? homework.createdAt) ||
+  0;
 
 const kyivFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "Europe/Kyiv",
@@ -56,7 +80,13 @@ const kyivOffsetMs = (timestamp: number) => {
   const get = (type: Intl.DateTimeFormatPartTypes) =>
     Number(parts.find((part) => part.type === type)?.value);
   return (
-    Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute")) - timestamp
+    Date.UTC(
+      get("year"),
+      get("month") - 1,
+      get("day"),
+      get("hour"),
+      get("minute"),
+    ) - timestamp
   );
 };
 
@@ -76,7 +106,8 @@ export const kyivLocalToIso = (value: string) => {
   return new Date(wallClock - kyivOffsetMs(guess)).toISOString();
 };
 
-export const formatMoney = (value: number) => `${new Intl.NumberFormat("uk-UA").format(value)} грн`;
+export const formatMoney = (value: number) =>
+  `${new Intl.NumberFormat("uk-UA").format(value)} грн`;
 
 // A calendar date (YYYY-MM-DD) as "10 жовтня 2026", independent of the viewer's time zone.
 export const formatDate = (date: string) =>

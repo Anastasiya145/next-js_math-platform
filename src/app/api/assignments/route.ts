@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { errorMessages } from "@/lib/error-messages";
 import { getStudentUser, getTeacherUser } from "@/lib/authz";
-import { createHomework, listHomeworkForStudent, listHomeworkForTeacher } from "@/lib/db";
+import {
+  createHomework,
+  listHomeworkForStudent,
+  listHomeworkForTeacher,
+} from "@/lib/db";
+import { isHttpUrl, isPositiveInteger } from "@/lib/validation";
 
 export async function GET() {
   const teacher = await getTeacherUser();
-  if (teacher) return NextResponse.json({ data: await listHomeworkForTeacher() });
+  if (teacher)
+    return NextResponse.json({ data: await listHomeworkForTeacher() });
 
   const student = await getStudentUser();
   if (student) {
@@ -13,13 +19,19 @@ export async function GET() {
       data: await listHomeworkForStudent(student.studentId),
     });
   }
-  return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+  return NextResponse.json(
+    { error: errorMessages.common.accessDenied },
+    { status: 403 },
+  );
 }
 
 export async function POST(request: Request) {
   const teacher = await getTeacherUser();
   if (!teacher) {
-    return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+    return NextResponse.json(
+      { error: errorMessages.common.accessDenied },
+      { status: 403 },
+    );
   }
 
   const body = (await request.json().catch(() => null)) as {
@@ -31,13 +43,18 @@ export async function POST(request: Request) {
     studentIds?: unknown;
   } | null;
   const title = typeof body?.title === "string" ? body.title.trim() : "";
-  const instructions = typeof body?.instructions === "string" ? body.instructions.trim() : "";
-  const resourceUrl = typeof body?.resourceUrl === "string" ? body.resourceUrl.trim() : "";
-  const dueAt = typeof body?.dueAt === "string" ? body.dueAt.trim() || null : null;
+  const instructions =
+    typeof body?.instructions === "string" ? body.instructions.trim() : "";
+  const resourceUrl =
+    typeof body?.resourceUrl === "string" ? body.resourceUrl.trim() : "";
+  const dueAt =
+    typeof body?.dueAt === "string" ? body.dueAt.trim() || null : null;
   const nextLessonAt =
-    typeof body?.nextLessonAt === "string" ? body.nextLessonAt.trim() || null : null;
+    typeof body?.nextLessonAt === "string"
+      ? body.nextLessonAt.trim() || null
+      : null;
   const studentIds = Array.isArray(body?.studentIds)
-    ? body.studentIds.filter((id): id is number => Number.isInteger(id) && Number(id) > 0)
+    ? body.studentIds.filter(isPositiveInteger)
     : [];
 
   if (
@@ -45,11 +62,14 @@ export async function POST(request: Request) {
     title.length > 160 ||
     instructions.length > 4000 ||
     studentIds.length === 0 ||
-    (resourceUrl && !isValidHttpUrl(resourceUrl)) ||
+    (resourceUrl && !isHttpUrl(resourceUrl)) ||
     (dueAt && Number.isNaN(Date.parse(dueAt))) ||
     (nextLessonAt && Number.isNaN(Date.parse(nextLessonAt)))
   ) {
-    return NextResponse.json({ error: errorMessages.homework.invalidAssignment }, { status: 400 });
+    return NextResponse.json(
+      { error: errorMessages.homework.invalidAssignment },
+      { status: 400 },
+    );
   }
 
   try {
@@ -68,17 +88,11 @@ export async function POST(request: Request) {
       error instanceof Error &&
       error.message === errorMessages.database.homeworkStudentsMissing
     ) {
-      return NextResponse.json({ error: errorMessages.homework.studentNotFound }, { status: 404 });
+      return NextResponse.json(
+        { error: errorMessages.homework.studentNotFound },
+        { status: 404 },
+      );
     }
     throw error;
-  }
-}
-
-function isValidHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
   }
 }

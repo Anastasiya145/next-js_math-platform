@@ -10,28 +10,40 @@ import {
   isDateString,
   isTimeString,
 } from "@/lib/schedule";
+import { isIntegerInRange, isPositiveInteger } from "@/lib/validation";
 
-type SlotInput = { weekday: number; startTime: string; durationMinutes: number };
-
-const isInteger = (value: unknown, min: number, max: number): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
+type SlotInput = {
+  weekday: number;
+  startTime: string;
+  durationMinutes: number;
+};
 
 const isSlot = (value: unknown): value is SlotInput => {
   const slot = value as Partial<SlotInput> | null;
   return (
     typeof slot === "object" &&
     slot !== null &&
-    isInteger(slot.weekday, 1, 7) &&
+    isIntegerInRange(slot.weekday, 1, 7) &&
     typeof slot.startTime === "string" &&
     isTimeString(slot.startTime) &&
-    isInteger(slot.durationMinutes, MIN_LESSON_MINUTES, MAX_LESSON_MINUTES)
+    isIntegerInRange(
+      slot.durationMinutes,
+      MIN_LESSON_MINUTES,
+      MAX_LESSON_MINUTES,
+    )
   );
 };
 
 // Replaces the student's hourly rate and weekly lesson slots.
-export async function PUT(request: Request, context: { params: Promise<{ studentId: string }> }) {
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ studentId: string }> },
+) {
   if (!(await getTeacherUser())) {
-    return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+    return NextResponse.json(
+      { error: errorMessages.common.accessDenied },
+      { status: 403 },
+    );
   }
 
   const studentId = Number((await context.params).studentId);
@@ -43,17 +55,20 @@ export async function PUT(request: Request, context: { params: Promise<{ student
   const slots = body?.slots;
   const times = Array.isArray(slots) ? slots.filter(isSlot) : [];
   if (
-    !Number.isInteger(studentId) ||
-    studentId < 1 ||
-    !isInteger(body?.hourlyRate, 0, MAX_HOURLY_RATE) ||
+    !isPositiveInteger(studentId) ||
+    !isIntegerInRange(body?.hourlyRate, 0, MAX_HOURLY_RATE) ||
     typeof body.startsOn !== "string" ||
     !isDateString(body.startsOn) ||
     !Array.isArray(slots) ||
     slots.length > MAX_SLOTS_PER_STUDENT ||
     times.length !== slots.length ||
-    new Set(times.map((slot) => `${slot.weekday}|${slot.startTime}`)).size !== times.length
+    new Set(times.map((slot) => `${slot.weekday}|${slot.startTime}`)).size !==
+      times.length
   ) {
-    return NextResponse.json({ error: errorMessages.schedule.invalidSchedule }, { status: 400 });
+    return NextResponse.json(
+      { error: errorMessages.schedule.invalidSchedule },
+      { status: 400 },
+    );
   }
 
   const saved = await setStudentSchedule({
@@ -63,7 +78,10 @@ export async function PUT(request: Request, context: { params: Promise<{ student
     slots: times,
   });
   if (!saved) {
-    return NextResponse.json({ error: errorMessages.students.notFound }, { status: 404 });
+    return NextResponse.json(
+      { error: errorMessages.students.notFound },
+      { status: 404 },
+    );
   }
   return NextResponse.json({ data: { saved: true } });
 }

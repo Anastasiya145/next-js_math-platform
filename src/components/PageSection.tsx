@@ -10,6 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { glow, gradientOf, shade, tint, type Tone } from "./tones";
+import { useAppLanguage } from "@/lib/LanguageProvider";
 
 type PageSectionProps = {
   title: string;
@@ -39,6 +40,7 @@ export function PageSection({
   emptyText,
   children,
 }: PageSectionProps) {
+  const { t } = useAppLanguage();
   return (
     <Card
       component="section"
@@ -68,7 +70,10 @@ export function PageSection({
           )
         }
         slotProps={{ title: { variant: "h6", component: "h2" } }}
-        sx={{ mb: 2, background: `linear-gradient(90deg, ${tint(tone, 14)}, transparent 75%)` }}
+        sx={{
+          mb: 2,
+          background: `linear-gradient(90deg, ${tint(tone, 14)}, transparent 75%)`,
+        }}
       />
       <CardContent sx={{ pt: 0 }}>
         {error && (
@@ -78,7 +83,7 @@ export function PageSection({
         )}
         {loading ? (
           <Box sx={{ textAlign: "center", py: 3 }}>
-            <CircularProgress aria-label="Завантаження" color={tone} />
+            <CircularProgress aria-label={t("loading")} color={tone} />
           </Box>
         ) : empty && !error ? (
           <Typography color="text.secondary">{emptyText}</Typography>

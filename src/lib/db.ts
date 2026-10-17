@@ -4,6 +4,7 @@ import { errorMessages } from "@/lib/error-messages";
 import { kyivLocalToIso } from "@/lib/format";
 import { NUSH_SPLIT_GRADE, type NushSubject } from "@/lib/nush";
 import type { PaymentsData } from "@/lib/payments";
+import type { AppLocale, LanguageCode, SiteType } from "@/lib/languages";
 import {
   buildLessons,
   findSlotFor,
@@ -38,25 +39,57 @@ function toJsonList(value: unknown): DatabaseRow[] {
 }
 
 function toSubmissionFiles(value: unknown): SubmissionFile[] {
-  return toJsonList(value).map((file) => ({ id: Number(file.id), name: String(file.name) }));
+  return toJsonList(value).map((file) => ({
+    id: Number(file.id),
+    name: String(file.name),
+  }));
 }
 
 function toDate(value: unknown): string | null {
   if (value == null) return null;
-  return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+  return value instanceof Date
+    ? value.toISOString().slice(0, 10)
+    : String(value).slice(0, 10);
 }
 
-function toLessonTopic(id: unknown, title: unknown, subject: unknown): LessonTopic | null {
+function toLessonTopic(
+  id: unknown,
+  title: unknown,
+  subject: unknown,
+): LessonTopic | null {
   if (typeof title !== "string" || typeof subject !== "string") return null;
-  return { id: id == null ? null : Number(id), title, subject: subject as NushSubject };
+  return {
+    id: id == null ? null : Number(id),
+    title,
+    subject: subject as NushSubject,
+  };
 }
 
 function mapStudent(row: DatabaseRow): Student {
+  const siteType: SiteType =
+    row.site_type === "languages" ? "languages" : "math";
   return {
     id: Number(row.id),
     name: String(row.name),
     grade: Number(row.grade),
     created_at: toTimestamp(row.created_at) ?? "",
+    siteType: row.site_type === "languages" ? "languages" : "math",
+    baseLanguage:
+      row.base_language === "fr" || row.base_language === "ru"
+        ? row.base_language
+        : null,
+    targetLanguage:
+      row.target_language === "fr" || row.target_language === "ru"
+        ? row.target_language
+        : null,
+    uiLanguage:
+      row.ui_language === "fr" ||
+      row.ui_language === "ru" ||
+      row.ui_language === "uk"
+        ? row.ui_language
+        : siteType === "languages"
+          ? "fr"
+          : "uk",
   };
 }
 
@@ -73,6 +106,10 @@ export type Student = {
   name: string;
   grade: number;
   created_at: string;
+  siteType: SiteType;
+  baseLanguage: LanguageCode | null;
+  targetLanguage: LanguageCode | null;
+  uiLanguage: AppLocale;
 };
 
 export type StudentAccount = Student & {
@@ -81,7 +118,10 @@ export type StudentAccount = Student & {
   password_hash: string;
 };
 
-export type StudentWithEmail = Student & { email: string | null; hasDriveFolder?: boolean };
+export type StudentWithEmail = Student & {
+  email: string | null;
+  hasDriveFolder?: boolean;
+};
 
 export type SubmissionFile = { id: number; name: string };
 
@@ -146,7 +186,9 @@ export type StudentProgressPoint = {
   gradedAt: string | null;
 };
 
-export async function listTextbooksForGrade(grade: number): Promise<StudentTextbook[]> {
+export async function listTextbooksForGrade(
+  grade: number,
+): Promise<StudentTextbook[]> {
   const rows = (await getDb()`
     SELECT id, grade, subject, title, author, url,
            resource_type AS "resourceType", is_demo AS "isDemo"
@@ -225,7 +267,8 @@ export async function updateTextbook(
 
 export async function listStudents(): Promise<Student[]> {
   const rows = (await getDb()`
-    SELECT id, name, grade, created_at FROM students ORDER BY grade ASC, id ASC
+    SELECT id, name, grade, created_at, site_type, base_language, target_language, ui_language
+    FROM students ORDER BY grade ASC, id ASC
   `) as DatabaseRow[];
   return rows.map(mapStudent);
 }
@@ -233,6 +276,9 @@ export async function listStudents(): Promise<Student[]> {
 export async function createStudentAccount(input: {
   name: string;
   grade: number;
+  siteType: SiteType;
+  baseLanguage: LanguageCode | null;
+  targetLanguage: LanguageCode | null;
   email: string;
   passwordSalt: string;
   passwordHash: string;
@@ -240,25 +286,34 @@ export async function createStudentAccount(input: {
   const sql = getDb();
   const rows = (await sql`
     WITH new_student AS (
-      INSERT INTO students (name, grade)
-      VALUES (${input.name}, ${input.grade})
-      RETURNING id, name, grade, created_at
+      INSERT INTO students (
+        name, grade, site_type, base_language, target_language, ui_language
+      )
+      VALUES (
+        ${input.name}, ${input.grade}, ${input.siteType}, ${input.baseLanguage},
+        ${input.targetLanguage}, ${input.siteType === "languages" ? "fr" : "uk"}
+      )
+      RETURNING id, name, grade, created_at, site_type, base_language, target_language, ui_language
     ), new_account AS (
       INSERT INTO student_accounts (student_id, email, password_salt, password_hash)
       SELECT id, ${input.email.trim().toLowerCase()}, ${input.passwordSalt}, ${input.passwordHash}
       FROM new_student
       RETURNING student_id, email
     )
-    SELECT s.id, s.name, s.grade, s.created_at, a.email
+    SELECT s.id, s.name, s.grade, s.created_at, s.site_type, s.base_language,
+           s.target_language, s.ui_language, a.email
     FROM new_student s JOIN new_account a ON a.student_id = s.id
   `) as DatabaseRow[];
   if (!rows[0]) throw new Error(errorMessages.database.studentCreateFailed);
   return mapStudentWithEmail(rows[0]);
 }
 
-export async function findStudentAccount(email: string): Promise<StudentAccount | null> {
+export async function findStudentAccount(
+  email: string,
+): Promise<StudentAccount | null> {
   const rows = (await getDb()`
-    SELECT s.id, s.name, s.grade, s.created_at, a.email,
+        SELECT s.id, s.name, s.grade, s.created_at, s.site_type, s.base_language,
+          s.target_language, s.ui_language, a.email,
            a.password_salt, a.password_hash
     FROM student_accounts a JOIN students s ON s.id = a.student_id
     WHERE lower(a.email) = ${email.trim().toLowerCase()}
@@ -275,7 +330,8 @@ export async function findStudentAccount(email: string): Promise<StudentAccount 
 
 export async function listStudentsWithEmail(): Promise<StudentWithEmail[]> {
   const rows = (await getDb()`
-    SELECT s.id, s.name, s.grade, s.created_at, a.email,
+        SELECT s.id, s.name, s.grade, s.created_at, s.site_type, s.base_language,
+          s.target_language, s.ui_language, a.email,
            f.drive_folder_id IS NOT NULL AS has_drive_folder
     FROM students s
     LEFT JOIN student_accounts a ON a.student_id = s.id
@@ -292,6 +348,9 @@ export async function updateStudent(input: {
   email: string;
   passwordSalt?: string;
   passwordHash?: string;
+  siteType: SiteType;
+  baseLanguage: LanguageCode | null;
+  targetLanguage: LanguageCode | null;
 }): Promise<StudentWithEmail | null> {
   const sql = getDb();
   const existingRows = (await sql`
@@ -300,21 +359,36 @@ export async function updateStudent(input: {
   `) as DatabaseRow[];
   const existingAccount = existingRows[0];
   const email = input.email.trim().toLowerCase();
-  if (!existingAccount && email && (!input.passwordSalt || !input.passwordHash)) {
+  if (
+    !existingAccount &&
+    email &&
+    (!input.passwordSalt || !input.passwordHash)
+  ) {
     throw new Error(errorMessages.database.temporaryPasswordRequired);
   }
 
   const passwordSalt =
     input.passwordSalt ??
-    (typeof existingAccount?.password_salt === "string" ? existingAccount.password_salt : null);
+    (typeof existingAccount?.password_salt === "string"
+      ? existingAccount.password_salt
+      : null);
   const passwordHash =
     input.passwordHash ??
-    (typeof existingAccount?.password_hash === "string" ? existingAccount.password_hash : null);
+    (typeof existingAccount?.password_hash === "string"
+      ? existingAccount.password_hash
+      : null);
   const rows = (await sql`
     WITH updated_student AS (
-      UPDATE students SET name = ${input.name}, grade = ${input.grade}
+      UPDATE students
+      SET name = ${input.name}, grade = ${input.grade}, site_type = ${input.siteType},
+          base_language = ${input.baseLanguage}, target_language = ${input.targetLanguage},
+          ui_language = CASE
+            WHEN site_type = ${input.siteType} THEN ui_language
+            WHEN ${input.siteType} = 'languages' THEN 'fr'
+            ELSE 'uk'
+          END
       WHERE id = ${input.studentId}
-      RETURNING id, name, grade, created_at
+      RETURNING id, name, grade, created_at, site_type, base_language, target_language, ui_language
     ), account_write AS (
       INSERT INTO student_accounts (student_id, email, password_salt, password_hash)
       SELECT id, ${email || existingAccount?.email || null},
@@ -327,7 +401,8 @@ export async function updateStudent(input: {
         password_hash = EXCLUDED.password_hash
       RETURNING student_id, email
     )
-    SELECT s.id, s.name, s.grade, s.created_at, a.email
+        SELECT s.id, s.name, s.grade, s.created_at, s.site_type, s.base_language,
+          s.target_language, s.ui_language, a.email
     FROM updated_student s
     LEFT JOIN account_write a ON a.student_id = s.id
   `) as DatabaseRow[];
@@ -346,18 +421,38 @@ export async function updateStudentPassword(
   `;
 }
 
-export async function getStudentById(studentId: number): Promise<Student | null> {
+export async function getStudentById(
+  studentId: number,
+): Promise<Student | null> {
   const rows = (await getDb()`
-    SELECT id, name, grade, created_at FROM students WHERE id = ${studentId}
+    SELECT id, name, grade, created_at, site_type, base_language, target_language, ui_language
+    FROM students WHERE id = ${studentId}
   `) as DatabaseRow[];
   return rows[0] ? mapStudent(rows[0]) : null;
 }
 
-export async function getStudentDriveFolderId(studentId: number): Promise<string | null> {
+export async function updateStudentUiLanguage(
+  studentId: number,
+  uiLanguage: Extract<AppLocale, "fr" | "ru">,
+): Promise<boolean> {
+  const rows = (await getDb()`
+    UPDATE students
+    SET ui_language = ${uiLanguage}
+    WHERE id = ${studentId} AND site_type = 'languages'
+    RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function getStudentDriveFolderId(
+  studentId: number,
+): Promise<string | null> {
   const rows = (await getDb()`
     SELECT drive_folder_id FROM student_drive_folders WHERE student_id = ${studentId}
   `) as DatabaseRow[];
-  return typeof rows[0]?.drive_folder_id === "string" ? rows[0].drive_folder_id : null;
+  return typeof rows[0]?.drive_folder_id === "string"
+    ? rows[0].drive_folder_id
+    : null;
 }
 
 export async function setStudentDriveFolderId(
@@ -435,9 +530,12 @@ export async function createHomework(input: {
   studentIds: number[];
 }): Promise<number> {
   const studentIds = [...new Set(input.studentIds)];
-  if (studentIds.length === 0) throw new Error(errorMessages.database.homeworkStudentRequired);
+  if (studentIds.length === 0)
+    throw new Error(errorMessages.database.homeworkStudentRequired);
 
-  const studentPlaceholders = studentIds.map((_, index) => `$${index + 7}`).join(", ");
+  const studentPlaceholders = studentIds
+    .map((_, index) => `$${index + 7}`)
+    .join(", ");
   const query = `
     WITH valid_students AS (
       SELECT id FROM students WHERE id IN (${studentPlaceholders})
@@ -522,7 +620,9 @@ export async function listHomeworkForTeacher(): Promise<HomeworkForTeacher[]> {
   return [...homeworks.values()];
 }
 
-export async function listHomeworkForStudent(studentId: number): Promise<StudentHomework[]> {
+export async function listHomeworkForStudent(
+  studentId: number,
+): Promise<StudentHomework[]> {
   const rows = (await getDb()`
         SELECT h.id, h.title, h.instructions, h.resource_url AS "resourceUrl",
           h.due_at AS "dueAt", h.next_lesson_at AS "nextLessonAt",
@@ -610,7 +710,9 @@ export async function saveHomeworkSubmission(input: {
   return rows.length > 0;
 }
 
-export async function listScheduleStudents(studentIds?: number[]): Promise<ScheduleStudent[]> {
+export async function listScheduleStudents(
+  studentIds?: number[],
+): Promise<ScheduleStudent[]> {
   const rows = (await getDb()`
     SELECT s.id, s.name, s.grade, s.hourly_rate AS "hourlyRate",
       COALESCE((
@@ -679,7 +781,12 @@ export async function listLessons(range: {
   }));
   return {
     students,
-    lessons: buildLessons({ students, rows: lessonRows, from: range.from, to: range.to }),
+    lessons: buildLessons({
+      students,
+      rows: lessonRows,
+      from: range.from,
+      to: range.to,
+    }),
   };
 }
 
@@ -693,11 +800,17 @@ export async function setStudentSchedule(input: {
   const [student] = await listScheduleStudents([input.studentId]);
   if (!student) return false;
 
-  const signature = (slot: { weekday: number; startTime: string; durationMinutes: number }) =>
-    `${slot.weekday}|${slot.startTime}|${slot.durationMinutes}`;
-  const active = new Set(student.slots.filter((slot) => slot.endsOn === null).map(signature));
+  const signature = (slot: {
+    weekday: number;
+    startTime: string;
+    durationMinutes: number;
+  }) => `${slot.weekday}|${slot.startTime}|${slot.durationMinutes}`;
+  const active = new Set(
+    student.slots.filter((slot) => slot.endsOn === null).map(signature),
+  );
   const next = new Set(input.slots.map(signature));
-  const changed = active.size !== next.size || [...next].some((item) => !active.has(item));
+  const changed =
+    active.size !== next.size || [...next].some((item) => !active.has(item));
   const newSlots = changed ? input.slots : [];
 
   const values = newSlots
@@ -730,7 +843,11 @@ export async function setStudentSchedule(input: {
     input.hourlyRate,
     input.startsOn,
     changed,
-    ...newSlots.flatMap((slot) => [slot.weekday, slot.startTime, slot.durationMinutes]),
+    ...newSlots.flatMap((slot) => [
+      slot.weekday,
+      slot.startTime,
+      slot.durationMinutes,
+    ]),
   ])) as DatabaseRow[];
   return rows.length > 0;
 }
@@ -765,12 +882,21 @@ export async function updateLesson(input: {
 
   const startsAt =
     input.startsAt ??
-    (existing ? (toTimestamp(existing.startsAt) ?? input.scheduledAt) : input.scheduledAt);
+    (existing
+      ? (toTimestamp(existing.startsAt) ?? input.scheduledAt)
+      : input.scheduledAt);
   const status: LessonStatus =
-    input.status ?? (input.startsAt || !existing ? "planned" : (existing.status as LessonStatus));
+    input.status ??
+    (input.startsAt || !existing
+      ? "planned"
+      : (existing.status as LessonStatus));
 
   // A planned lesson at its original time is just the schedule again, so it needs no row.
-  if (!existing?.isExtra && status === "planned" && startsAt === input.scheduledAt) {
+  if (
+    !existing?.isExtra &&
+    status === "planned" &&
+    startsAt === input.scheduledAt
+  ) {
     await sql`
       DELETE FROM lessons
       WHERE student_id = ${input.studentId} AND scheduled_at = ${input.scheduledAt}
@@ -784,7 +910,11 @@ export async function updateLesson(input: {
     if (input.topicId === undefined) {
       topic =
         existing?.status === "held"
-          ? toLessonTopic(existing.topicId, existing.topicTitle, existing.topicSubject)
+          ? toLessonTopic(
+              existing.topicId,
+              existing.topicTitle,
+              existing.topicSubject,
+            )
           : null;
     } else if (input.topicId !== null) {
       topic = await findLessonTopic(input.topicId);
@@ -837,7 +967,10 @@ export async function createExtraLesson(input: {
 }
 
 // Removes an added lesson or drops the mark of a scheduled one, so it becomes planned again.
-export async function deleteLesson(studentId: number, scheduledAt: string): Promise<boolean> {
+export async function deleteLesson(
+  studentId: number,
+  scheduledAt: string,
+): Promise<boolean> {
   const rows = (await getDb()`
     DELETE FROM lessons
     WHERE student_id = ${studentId} AND scheduled_at = ${scheduledAt}
@@ -847,7 +980,10 @@ export async function deleteLesson(studentId: number, scheduledAt: string): Prom
 }
 
 // `from` and `to` are dates (YYYY-MM-DD), `to` exclusive. Balances cover all time.
-export async function listPayments(range: { from: string; to: string }): Promise<PaymentsData> {
+export async function listPayments(range: {
+  from: string;
+  to: string;
+}): Promise<PaymentsData> {
   const sql = getDb();
   const [balances, payments] = (await Promise.all([
     sql`
@@ -942,7 +1078,9 @@ export async function gradeHomework(input: {
   return rows.length > 0;
 }
 
-export async function getStudentProgress(studentId: number): Promise<StudentProgressPoint[]> {
+export async function getStudentProgress(
+  studentId: number,
+): Promise<StudentProgressPoint[]> {
   const rows = (await getDb()`
         SELECT h.id AS "homeworkId", h.title,
           COALESCE(h.next_lesson_at, h.due_at, sub.submitted_at) AS "lessonAt",
@@ -974,7 +1112,11 @@ export async function deleteHomework(homeworkId: number): Promise<boolean> {
   return rows.length > 0;
 }
 
-export type HomeworkUpdateResult = "updated" | "notFound" | "studentsMissing" | "studentLocked";
+export type HomeworkUpdateResult =
+  | "updated"
+  | "notFound"
+  | "studentsMissing"
+  | "studentLocked";
 
 // Updates the assignment and its student list. Students with a submission cannot be removed.
 export async function updateHomework(input: {
@@ -986,10 +1128,12 @@ export async function updateHomework(input: {
   studentIds: number[];
 }): Promise<HomeworkUpdateResult> {
   const studentIds = [...new Set(input.studentIds)];
-  if (studentIds.length === 0) throw new Error(errorMessages.database.homeworkStudentRequired);
+  if (studentIds.length === 0)
+    throw new Error(errorMessages.database.homeworkStudentRequired);
 
   const sql = getDb();
-  const idList = (offset: number) => studentIds.map((_, index) => `$${index + offset}`).join(", ");
+  const idList = (offset: number) =>
+    studentIds.map((_, index) => `$${index + offset}`).join(", ");
   const [homeworks, students, locked] = (await Promise.all([
     sql`SELECT id FROM homeworks WHERE id = ${input.homeworkId}`,
     sql.query(`SELECT id FROM students WHERE id IN (${idList(1)})`, studentIds),
@@ -1056,7 +1200,9 @@ const toNushTopic = (row: DatabaseRow): NushTopic => ({
   description: String(row.description ?? ""),
 });
 
-export async function listNushTopicsForGrade(grade: number): Promise<NushTopic[]> {
+export async function listNushTopicsForGrade(
+  grade: number,
+): Promise<NushTopic[]> {
   const rows = (await getDb()`
     SELECT id, grade, subject, title, description
     FROM nush_topics
@@ -1070,7 +1216,9 @@ async function findLessonTopic(topicId: number): Promise<LessonTopic | null> {
   const rows = (await getDb()`
     SELECT id, title, subject FROM nush_topics WHERE id = ${topicId}
   `) as DatabaseRow[];
-  return rows[0] ? toLessonTopic(rows[0].id, rows[0].title, rows[0].subject) : null;
+  return rows[0]
+    ? toLessonTopic(rows[0].id, rows[0].title, rows[0].subject)
+    : null;
 }
 
 export async function createNushTopic(input: {
@@ -1090,7 +1238,9 @@ export async function createNushTopic(input: {
   return toNushTopic(row);
 }
 
-export async function getNushTopicMaterials(topicId: number): Promise<NushTopicMaterial[]> {
+export async function getNushTopicMaterials(
+  topicId: number,
+): Promise<NushTopicMaterial[]> {
   const rows = (await getDb()`
     SELECT id, topic_id, name, url, material_type
     FROM nush_topic_materials
@@ -1128,7 +1278,9 @@ export async function addNushTopicMaterial(input: {
   };
 }
 
-export async function deleteNushTopicMaterial(materialId: number): Promise<void> {
+export async function deleteNushTopicMaterial(
+  materialId: number,
+): Promise<void> {
   await getDb()`DELETE FROM nush_topic_materials WHERE id = ${materialId}`;
 }
 
@@ -1258,7 +1410,10 @@ export async function updateMaterialClass(input: {
   return rows.length > 0;
 }
 
-export async function createMaterialTopic(classId: number, title: string): Promise<boolean> {
+export async function createMaterialTopic(
+  classId: number,
+  title: string,
+): Promise<boolean> {
   const rows = (await getDb()`
     INSERT INTO material_topics (class_id, title)
     SELECT id, ${title} FROM material_classes WHERE id = ${classId}
@@ -1267,7 +1422,10 @@ export async function createMaterialTopic(classId: number, title: string): Promi
   return rows.length > 0;
 }
 
-export async function deleteMaterialTopic(classId: number, topicId: number): Promise<boolean> {
+export async function deleteMaterialTopic(
+  classId: number,
+  topicId: number,
+): Promise<boolean> {
   const rows = (await getDb()`
     DELETE FROM material_topics WHERE id = ${topicId} AND class_id = ${classId} RETURNING id
   `) as DatabaseRow[];
@@ -1343,7 +1501,9 @@ export type TeacherAccount = {
   password_hash: string;
 };
 
-export async function findTeacherAccount(email: string): Promise<TeacherAccount | null> {
+export async function findTeacherAccount(
+  email: string,
+): Promise<TeacherAccount | null> {
   const rows = (await getDb()`
     SELECT email, name, password_salt, password_hash
     FROM teacher_accounts
@@ -1368,7 +1528,9 @@ export type TeacherGoogleToken = {
   expiresAt: string;
 };
 
-export async function getTeacherGoogleToken(email: string): Promise<TeacherGoogleToken | null> {
+export async function getTeacherGoogleToken(
+  email: string,
+): Promise<TeacherGoogleToken | null> {
   const rows = (await getDb()`
     SELECT email, access_token AS "accessToken", refresh_token AS "refreshToken",
            expires_at AS "expiresAt"

@@ -25,16 +25,20 @@ export default function StudentsPage() {
   );
   const [editing, setEditing] = useState<{ student?: Student } | null>(null);
   const students = data ?? [];
-  const byGrade = Object.entries(Object.groupBy(students, (student) => student.grade)).sort(
-    ([first], [second]) => Number(first) - Number(second),
-  );
+  const byGrade = Object.entries(
+    Object.groupBy(students, (student) => student.grade),
+  ).sort(([first], [second]) => Number(first) - Number(second));
 
   return (
     <AppShell
       title="Учні"
       subtitle="Навчальні групи та доступ до особистих кабінетів"
       actions={
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setEditing({})}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setEditing({})}
+        >
           Додати учня
         </Button>
       }
@@ -64,7 +68,11 @@ export default function StudentsPage() {
                   tone={toneAt(student.id)}
                   icon={student.name.charAt(0).toUpperCase()}
                   primary={student.name}
-                  secondary={student.email ?? "без входу"}
+                  secondary={`${student.email ?? "без входу"} · ${
+                    student.siteType === "languages"
+                      ? `Мови: ${student.baseLanguage?.toUpperCase()} → ${student.targetLanguage?.toUpperCase()}`
+                      : "Математика · українська"
+                  }`}
                   actions={
                     <Stack direction="row">
                       <IconAction

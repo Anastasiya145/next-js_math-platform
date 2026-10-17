@@ -6,7 +6,6 @@ import { api } from "@/lib/api";
 import { GRADES } from "@/lib/format";
 import { errorMessages } from "@/lib/error-messages";
 import {
-  MAX_EMAIL_LENGTH,
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   validateEmail,
@@ -15,6 +14,9 @@ import {
 import { router } from "@/app/router";
 import { FormDialog } from "@/components/FormDialog";
 import type { Student } from "./types";
+import { isLanguageCode } from "@/lib/languages";
+import { PasswordField } from "@/components/PasswordField";
+import { EmailField } from "@/components/EmailField";
 
 type StudentDialogProps = {
   student?: Student;
@@ -23,12 +25,19 @@ type StudentDialogProps = {
 };
 
 // Creates a student account, or edits one when `student` is given.
-export function StudentDialog({ student, onSaved, onClose }: StudentDialogProps) {
+export function StudentDialog({
+  student,
+  onSaved,
+  onClose,
+}: StudentDialogProps) {
   const [values, setValues] = useState({
     name: student?.name ?? "",
     grade: String(student?.grade ?? 4),
     email: student?.email ?? "",
     password: "",
+    siteType: student?.siteType ?? "math",
+    baseLanguage: student?.baseLanguage ?? "fr",
+    targetLanguage: student?.targetLanguage ?? "ru",
   });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -40,6 +49,13 @@ export function StudentDialog({ student, onSaved, onClose }: StudentDialogProps)
       (student && !student.email && values.email.trim() && !values.password
         ? errorMessages.students.newAccountPasswordRequired
         : null),
+    languagePair:
+      values.siteType === "languages" &&
+      (!isLanguageCode(values.baseLanguage) ||
+        !isLanguageCode(values.targetLanguage) ||
+        values.baseLanguage === values.targetLanguage)
+        ? errorMessages.students.languagePairInvalid
+        : null,
   };
 
   const field = (key: keyof typeof values) => ({
@@ -60,16 +76,26 @@ export function StudentDialog({ student, onSaved, onClose }: StudentDialogProps)
       submitDisabled={Object.values(errors).some(Boolean)}
       onClose={onClose}
       onSubmit={async () => {
-        await api(student ? router.api.student(student.id) : router.api.students, {
-          method: student ? "PATCH" : "POST",
-          body: {
-            name: values.name.trim(),
-            grade: Number(values.grade),
-            email: values.email.trim().toLowerCase(),
-            temporaryPassword: values.password,
+        await api(
+          student ? router.api.student(student.id) : router.api.students,
+          {
+            method: student ? "PATCH" : "POST",
+            body: {
+              name: values.name.trim(),
+              grade: Number(values.grade),
+              email: values.email.trim().toLowerCase(),
+              temporaryPassword: values.password,
+              siteType: values.siteType,
+              baseLanguage:
+                values.siteType === "languages" ? values.baseLanguage : null,
+              targetLanguage:
+                values.siteType === "languages" ? values.targetLanguage : null,
+            },
+            fallback: student
+              ? errorMessages.students.saveFailed
+              : errorMessages.students.addFailed,
           },
-          fallback: student ? errorMessages.students.saveFailed : errorMessages.students.addFailed,
-        });
+        );
         await onSaved();
       }}
     >
@@ -87,14 +113,54 @@ export function StudentDialog({ student, onSaved, onClose }: StudentDialogProps)
         ))}
       </TextField>
       <TextField
-        type="email"
-        label="Email учня"
-        autoComplete="off"
-        slotProps={{ htmlInput: { maxLength: MAX_EMAIL_LENGTH } }}
-        {...field("email")}
-      />
-      <TextField
-        type="password"
+        select
+        label="Сайт"
+        value={values.siteType}
+        onChange={(event) => {
+          const siteType = event.target.value;
+          if (siteType === "math" || siteType === "languages") {
+            setValues({ ...values, siteType });
+          }
+        }}
+      >
+        <MenuItem value="math">Математика · українська</MenuItem>
+        <MenuItem value="languages">Мови</MenuItem>
+      </TextField>
+      {values.siteType === "languages" && (
+        <>
+          <TextField
+            select
+            label="Базова мова"
+            value={values.baseLanguage}
+            onChange={(event) => {
+              if (isLanguageCode(event.target.value)) {
+                setValues({ ...values, baseLanguage: event.target.value });
+              }
+            }}
+          >
+            <MenuItem value="fr">Французька</MenuItem>
+            <MenuItem value="ru">Російська</MenuItem>
+          </TextField>
+          <TextField
+            select
+            label="Мова навчання"
+            value={values.targetLanguage}
+            onChange={(event) => {
+              if (isLanguageCode(event.target.value)) {
+                setValues({ ...values, targetLanguage: event.target.value });
+              }
+            }}
+            error={Boolean(errors.languagePair)}
+            helperText={errors.languagePair}
+          >
+            <MenuItem value="fr">Французька</MenuItem>
+            <MenuItem value="ru">Російська</MenuItem>
+          </TextField>
+        </>
+      )}
+      <EmailField label="Email учня" autoComplete="off" {...field("email")} />
+      <PasswordField
+        locale="uk"
         label="Тимчасовий пароль"
         autoComplete="new-password"
         slotProps={{ htmlInput: { maxLength: MAX_PASSWORD_LENGTH } }}

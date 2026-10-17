@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import { auth } from "@/auth";
 import { Providers } from "@/components/Providers";
+import { siteConfig, siteVariant } from "@/lib/site-variant";
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -11,14 +12,22 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Математика з Анастасією",
-  description: "Платформа для репетитора з математики",
+  title: siteConfig.title,
+  description: siteConfig.description,
+  icons: { icon: siteConfig.favicon },
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const session = await auth();
   return (
-    <html lang="uk" className={roboto.variable}>
+    <html
+      lang={
+        siteVariant === "languages" && session?.user.siteType === "languages"
+          ? session.user.uiLanguage
+          : siteConfig.defaultLocale
+      }
+      className={roboto.variable}
+    >
       <body suppressHydrationWarning>
         <Providers session={session}>{children}</Providers>
       </body>

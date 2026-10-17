@@ -5,18 +5,28 @@ import { errorMessages } from "@/lib/error-messages";
 import { buildStudentReport, MAX_REPORT_DAYS } from "@/lib/report";
 import { renderReportPdf } from "@/lib/report-pdf";
 import { addDays, isDateString } from "@/lib/schedule";
+import { isPositiveInteger } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
 // PDF report for one student over the inclusive period `from`..`to` (Kyiv dates, YYYY-MM-DD).
-export async function GET(request: Request, context: { params: Promise<{ studentId: string }> }) {
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ studentId: string }> },
+) {
   if (!(await getTeacherUser())) {
-    return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+    return NextResponse.json(
+      { error: errorMessages.common.accessDenied },
+      { status: 403 },
+    );
   }
 
   const studentId = Number((await context.params).studentId);
-  if (!Number.isInteger(studentId) || studentId < 1) {
-    return NextResponse.json({ error: errorMessages.students.invalidId }, { status: 400 });
+  if (!isPositiveInteger(studentId)) {
+    return NextResponse.json(
+      { error: errorMessages.students.invalidId },
+      { status: 400 },
+    );
   }
 
   const params = new URL(request.url).searchParams;
@@ -28,7 +38,10 @@ export async function GET(request: Request, context: { params: Promise<{ student
     from > to ||
     addDays(from, MAX_REPORT_DAYS) <= to
   ) {
-    return NextResponse.json({ error: errorMessages.report.invalidRange }, { status: 400 });
+    return NextResponse.json(
+      { error: errorMessages.report.invalidRange },
+      { status: 400 },
+    );
   }
 
   try {
@@ -38,7 +51,10 @@ export async function GET(request: Request, context: { params: Promise<{ student
       getStudentProgress(studentId),
     ]);
     if (!student) {
-      return NextResponse.json({ error: errorMessages.students.notFound }, { status: 404 });
+      return NextResponse.json(
+        { error: errorMessages.students.notFound },
+        { status: 404 },
+      );
     }
 
     const report = buildStudentReport({
@@ -60,6 +76,9 @@ export async function GET(request: Request, context: { params: Promise<{ student
     });
   } catch (error) {
     console.error("Failed to build the student report", error);
-    return NextResponse.json({ error: errorMessages.report.generateFailed }, { status: 500 });
+    return NextResponse.json(
+      { error: errorMessages.report.generateFailed },
+      { status: 500 },
+    );
   }
 }

@@ -2,7 +2,12 @@
 
 ## What it is
 
-A mathematics tutoring workspace with separate teacher and student experiences. The teacher dashboard organizes learners, classes, teaching materials, individually assigned homework, submissions, grades, and student progress. Students see only work assigned to their account.
+A tutoring workspace with two student-facing products and a shared teacher dashboard:
+
+- Mathematics remains Ukrainian and organizes learners, classes, teaching materials, assigned homework, submissions, grades, and progress.
+- Language learning has a French/Russian interface. Student profiles store their product, base language, learning language, and preferred interface language.
+
+Student accounts default to the mathematics product in Ukrainian. The current language-learning profile is configured for French as the base language and Russian as the learning language. The language site currently reuses the existing student portal and assignment/resource data model; it does not yet provide a separate language-course authoring workflow.
 
 ## Roles and access
 
@@ -32,7 +37,7 @@ A mathematics tutoring workspace with separate teacher and student experiences. 
 - Make routine teaching administration clear and quick.
 - Keep learner information grouped by class and protect student-specific data at every API boundary.
 - Make due work, missing homework, submissions, and grades understandable without relying on color alone.
-- Use supportive, plain Ukrainian in end-user workflows.
+- Use supportive, plain Ukrainian in mathematics workflows and French or Russian in language-learning student workflows.
 - Do not present static sample dashboard numbers as live analytics.
 
 ## Storage and scope notes

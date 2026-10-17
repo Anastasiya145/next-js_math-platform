@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Button, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import {
+  Button,
+  IconButton,
+  MenuItem,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import { api } from "@/lib/api";
@@ -19,9 +27,16 @@ import {
   type ScheduleStudent,
 } from "@/lib/schedule";
 import { FormDialog } from "@/components/FormDialog";
+import { DateField } from "@/components/DateField";
+import { isWholeNumberInRange } from "@/lib/validation";
 import { router } from "../router";
 
-type SlotDraft = { key: number; weekday: string; startTime: string; durationMinutes: string };
+type SlotDraft = {
+  key: number;
+  weekday: string;
+  startTime: string;
+  durationMinutes: string;
+};
 
 type Props = {
   student: ScheduleStudent;
@@ -29,13 +44,12 @@ type Props = {
   onClose: () => void;
 };
 
-const isWholeNumber = (value: string, min: number, max: number) =>
-  /^\d+$/.test(value) && Number(value) >= min && Number(value) <= max;
-
 // Edits the hourly rate and the weekly lesson slots of one student.
 export function ScheduleDialog({ student, onSaved, onClose }: Props) {
   const activeSlots = student.slots.filter((slot) => slot.endsOn === null);
-  const [rate, setRate] = useState(student.hourlyRate ? String(student.hourlyRate) : "");
+  const [rate, setRate] = useState(
+    student.hourlyRate ? String(student.hourlyRate) : "",
+  );
   const [rateTouched, setRateTouched] = useState(false);
   // Changes apply from this date; lessons before it stay as they were.
   const [startsOn, setStartsOn] = useState(() => {
@@ -52,14 +66,23 @@ export function ScheduleDialog({ student, onSaved, onClose }: Props) {
     })),
   );
 
-  const rateError = isWholeNumber(rate, 0, MAX_HOURLY_RATE)
+  const rateError = isWholeNumberInRange(rate, 0, MAX_HOURLY_RATE)
     ? null
     : errorMessages.schedule.rateRange;
-  const startsOnError = isDateString(startsOn) ? null : errorMessages.schedule.startsOnRequired;
+  const startsOnError = isDateString(startsOn)
+    ? null
+    : errorMessages.schedule.startsOnRequired;
   const seen = new Set<string>();
   const slotErrors = slots.map((slot) => {
-    if (!isTimeString(slot.startTime)) return { time: errorMessages.schedule.slotTimeRequired };
-    if (!isWholeNumber(slot.durationMinutes, MIN_LESSON_MINUTES, MAX_LESSON_MINUTES)) {
+    if (!isTimeString(slot.startTime))
+      return { time: errorMessages.schedule.slotTimeRequired };
+    if (
+      !isWholeNumberInRange(
+        slot.durationMinutes,
+        MIN_LESSON_MINUTES,
+        MAX_LESSON_MINUTES,
+      )
+    ) {
       return { duration: errorMessages.schedule.slotDurationRange };
     }
     const id = `${slot.weekday}|${slot.startTime}`;
@@ -73,7 +96,9 @@ export function ScheduleDialog({ student, onSaved, onClose }: Props) {
     slotErrors.some((error) => Object.keys(error).length > 0);
 
   const updateSlot = (key: number, patch: Partial<SlotDraft>) =>
-    setSlots((current) => current.map((slot) => (slot.key === key ? { ...slot, ...patch } : slot)));
+    setSlots((current) =>
+      current.map((slot) => (slot.key === key ? { ...slot, ...patch } : slot)),
+    );
 
   const addSlot = () => {
     setSlots((current) => [
@@ -147,7 +172,9 @@ export function ScheduleDialog({ student, onSaved, onClose }: Props) {
               select
               label="День"
               value={slot.weekday}
-              onChange={(event) => updateSlot(slot.key, { weekday: event.target.value })}
+              onChange={(event) =>
+                updateSlot(slot.key, { weekday: event.target.value })
+              }
               sx={{ flex: 1.4 }}
             >
               {WEEKDAY_NAMES.map((name, weekday) => (
@@ -160,7 +187,9 @@ export function ScheduleDialog({ student, onSaved, onClose }: Props) {
               label="Час (Київ)"
               type="time"
               value={slot.startTime}
-              onChange={(event) => updateSlot(slot.key, { startTime: event.target.value })}
+              onChange={(event) =>
+                updateSlot(slot.key, { startTime: event.target.value })
+              }
               error={Boolean(slotErrors[index].time)}
               helperText={slotErrors[index].time}
               slotProps={{ inputLabel: { shrink: true } }}
@@ -170,7 +199,9 @@ export function ScheduleDialog({ student, onSaved, onClose }: Props) {
               label="Тривалість, хв"
               value={slot.durationMinutes}
               onChange={(event) =>
-                updateSlot(slot.key, { durationMinutes: event.target.value.trim() })
+                updateSlot(slot.key, {
+                  durationMinutes: event.target.value.trim(),
+                })
               }
               error={Boolean(slotErrors[index].duration)}
               helperText={slotErrors[index].duration}
@@ -182,7 +213,9 @@ export function ScheduleDialog({ student, onSaved, onClose }: Props) {
                 aria-label="Прибрати день"
                 color="error"
                 onClick={() =>
-                  setSlots((current) => current.filter((item) => item.key !== slot.key))
+                  setSlots((current) =>
+                    current.filter((item) => item.key !== slot.key),
+                  )
                 }
                 sx={{ alignSelf: { xs: "flex-end", sm: "center" } }}
               >
@@ -206,15 +239,13 @@ export function ScheduleDialog({ student, onSaved, onClose }: Props) {
           </Typography>
         )}
       </Stack>
-      <TextField
+      <DateField
         label="Розклад діє з"
-        type="date"
         required
         value={startsOn}
         onChange={(event) => setStartsOn(event.target.value)}
         error={Boolean(startsOnError)}
         helperText={startsOnError ?? "Уроки до цієї дати не змінюються"}
-        slotProps={{ inputLabel: { shrink: true } }}
       />
     </FormDialog>
   );

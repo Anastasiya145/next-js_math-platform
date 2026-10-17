@@ -1,6 +1,6 @@
 # Math Tutor Platform
 
-Web workspace for a mathematics tutor: students, classes, homework, grades, and teaching materials. The teacher and students have separate cabinets. The interface is in Ukrainian.
+Shared-code tutoring platform with two Vercel deployments: the Ukrainian mathematics site and the French/Russian language-learning site. Student profiles are assigned to one site; the mathematics site is the default locally.
 
 See [PRODUCT.md](PRODUCT.md) for scope and [DESIGN.md](DESIGN.md) for visual direction.
 
@@ -42,6 +42,7 @@ Keep secrets in the git-ignored `.env` or `.env.local`; never commit them or sha
 | `AUTH_SECRET`                          | Random string of at least 32 characters                      |
 | `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Google OAuth client                                          |
 | `ADMIN_EMAIL`                          | Teacher email; enables the Google sign-in button on `/login` |
+| `NEXT_PUBLIC_SITE_VARIANT`             | Required on Vercel: `math` or `languages`                    |
 | `GOOGLE_PICKER_API_KEY`                | Browser API key for Google Picker (optional, folder linking) |
 | `GOOGLE_PROJECT_NUMBER`                | Google Cloud project number used as the Picker app ID        |
 
@@ -72,6 +73,13 @@ With the `drive.file` scope the app only sees files it created or that the teach
 
 On Windows, if Auth.js logs `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, use `npm run dev:system-ca` instead of disabling TLS verification.
 
-## Deployment
+## Vercel deployments
 
-The app can be deployed on Vercel. Add the environment variables above and the production OAuth redirect URI.
+Create two Vercel projects from the same Git repository and use the repository root as each project's root directory. Set `NEXT_PUBLIC_SITE_VARIANT` separately in each project's Production and Preview environments:
+
+- Mathematics project: `NEXT_PUBLIC_SITE_VARIANT=math`
+- Language-learning project: `NEXT_PUBLIC_SITE_VARIANT=languages`
+
+Each project can use its own Vercel domain or custom domain. Both deployments use the same Neon database so student assignments and account site assignments stay consistent. Add the database and Auth.js environment variables to both projects. Configure Google OAuth and Drive credentials for the mathematics project; add its production domain and `/api/auth/callback/google` redirect URI in Google Cloud. The language project is student-only and does not use teacher Google sign-in.
+
+Vercel builds fail if the site variant is missing or invalid, preventing the two deployments from silently receiving the same branding and access rules. Locally, omitting the variable defaults to mathematics; set it to `languages` to preview that deployment.

@@ -2,9 +2,9 @@
 
 ## Product
 
-This is a web workspace for a mathematics tutor. The current interface centers on a tutor dashboard, students, classes, assignments, and teaching materials. The primary audience is the tutor; do not assume student-facing workflows exist unless the code confirms them.
+This is a tutoring workspace with a shared teacher dashboard and two student-facing products: mathematics (Ukrainian) and language learning (French/Russian). Student profiles are assigned to one product; mathematics/Ukrainian is the default. The current language-learning profile uses French as its base language and Russian as its learning language.
 
-**Language:** The entire application interface is exclusively in Ukrainian. Keep developer-facing code, comments, and documentation in English unless the user asks otherwise. All user-facing text, labels, placeholders, error messages, and UI copy must be in Ukrainian.
+**Language:** Teacher and mathematics interfaces are exclusively in Ukrainian. Language-learning student login and portal support French and Russian. Keep developer-facing code, comments, and documentation in English unless the user asks otherwise. Translate fixed application UI, but do not translate teacher-authored homework or materials.
 
 ## Stack and project structure
 

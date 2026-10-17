@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getTeacherUser } from "@/lib/authz";
-import { createExtraLesson, deleteLesson, listLessons, updateLesson } from "@/lib/db";
+import {
+  createExtraLesson,
+  deleteLesson,
+  listLessons,
+  updateLesson,
+} from "@/lib/db";
 import { errorMessages } from "@/lib/error-messages";
 import {
   MAX_LESSON_MINUTES,
@@ -10,21 +15,26 @@ import {
   isDateString,
   type LessonStatus,
 } from "@/lib/schedule";
+import { isIntegerInRange, isPositiveInteger } from "@/lib/validation";
 
-const STATUSES: readonly string[] = ["planned", "held", "cancelled"] satisfies LessonStatus[];
+const STATUSES: readonly string[] = [
+  "planned",
+  "held",
+  "cancelled",
+] satisfies LessonStatus[];
 const MAX_STUDENT_FILTER = 100;
 
 const denied = () =>
-  NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+  NextResponse.json(
+    { error: errorMessages.common.accessDenied },
+    { status: 403 },
+  );
 
 const toInstant = (value: unknown) => {
   if (typeof value !== "string") return null;
   const time = Date.parse(value);
   return Number.isNaN(time) ? null : new Date(time).toISOString();
 };
-
-const isId = (value: unknown): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value > 0;
 
 export async function GET(request: Request) {
   if (!(await getTeacherUser())) return denied();
@@ -38,7 +48,10 @@ export async function GET(request: Request) {
     from >= to ||
     to > addDays(from, MAX_RANGE_DAYS)
   ) {
-    return NextResponse.json({ error: errorMessages.schedule.invalidRange }, { status: 400 });
+    return NextResponse.json(
+      { error: errorMessages.schedule.invalidRange },
+      { status: 400 },
+    );
   }
 
   const filter = params.get("studentIds");
@@ -47,13 +60,18 @@ export async function GET(request: Request) {
     studentIds = filter.split(",").map(Number);
     if (
       studentIds.length > MAX_STUDENT_FILTER ||
-      !studentIds.every((id) => Number.isInteger(id) && id > 0)
+      !studentIds.every(isPositiveInteger)
     ) {
-      return NextResponse.json({ error: errorMessages.schedule.invalidStudents }, { status: 400 });
+      return NextResponse.json(
+        { error: errorMessages.schedule.invalidStudents },
+        { status: 400 },
+      );
     }
   }
 
-  return NextResponse.json({ data: await listLessons({ from, to, studentIds }) });
+  return NextResponse.json({
+    data: await listLessons({ from, to, studentIds }),
+  });
 }
 
 // Adds a one-off lesson outside the weekly schedule.
@@ -68,22 +86,32 @@ export async function POST(request: Request) {
   const startsAt = toInstant(body?.startsAt);
   const durationMinutes = body?.durationMinutes;
   if (
-    !isId(body?.studentId) ||
+    !isPositiveInteger(body?.studentId) ||
     !startsAt ||
-    typeof durationMinutes !== "number" ||
-    !Number.isInteger(durationMinutes) ||
-    durationMinutes < MIN_LESSON_MINUTES ||
-    durationMinutes > MAX_LESSON_MINUTES
+    !isIntegerInRange(durationMinutes, MIN_LESSON_MINUTES, MAX_LESSON_MINUTES)
   ) {
-    return NextResponse.json({ error: errorMessages.schedule.invalidLesson }, { status: 400 });
+    return NextResponse.json(
+      { error: errorMessages.schedule.invalidLesson },
+      { status: 400 },
+    );
   }
 
-  const result = await createExtraLesson({ studentId: body.studentId, startsAt, durationMinutes });
+  const result = await createExtraLesson({
+    studentId: body.studentId,
+    startsAt,
+    durationMinutes,
+  });
   if (result === "missing") {
-    return NextResponse.json({ error: errorMessages.students.notFound }, { status: 404 });
+    return NextResponse.json(
+      { error: errorMessages.students.notFound },
+      { status: 404 },
+    );
   }
   if (result === "duplicate") {
-    return NextResponse.json({ error: errorMessages.schedule.lessonDuplicate }, { status: 409 });
+    return NextResponse.json(
+      { error: errorMessages.schedule.lessonDuplicate },
+      { status: 409 },
+    );
   }
   return NextResponse.json({ data: { created: true } }, { status: 201 });
 }
@@ -100,18 +128,25 @@ export async function PATCH(request: Request) {
     topicId?: unknown;
   } | null;
   const scheduledAt = toInstant(body?.scheduledAt);
-  const startsAt = body?.startsAt === undefined ? undefined : toInstant(body.startsAt);
+  const startsAt =
+    body?.startsAt === undefined ? undefined : toInstant(body.startsAt);
   const status = body?.status;
   const topicId = body?.topicId;
   if (
-    !isId(body?.studentId) ||
+    !isPositiveInteger(body?.studentId) ||
     !scheduledAt ||
     startsAt === null ||
-    (status !== undefined && (typeof status !== "string" || !STATUSES.includes(status))) ||
-    (topicId !== undefined && topicId !== null && !isId(topicId)) ||
+    (status !== undefined &&
+      (typeof status !== "string" || !STATUSES.includes(status))) ||
+    (topicId !== undefined &&
+      topicId !== null &&
+      !isPositiveInteger(topicId)) ||
     (status === undefined && startsAt === undefined && topicId === undefined)
   ) {
-    return NextResponse.json({ error: errorMessages.schedule.invalidLesson }, { status: 400 });
+    return NextResponse.json(
+      { error: errorMessages.schedule.invalidLesson },
+      { status: 400 },
+    );
   }
 
   const result = await updateLesson({
@@ -122,10 +157,16 @@ export async function PATCH(request: Request) {
     topicId: topicId as number | null | undefined,
   });
   if (result === "lessonNotFound") {
-    return NextResponse.json({ error: errorMessages.schedule.lessonNotFound }, { status: 404 });
+    return NextResponse.json(
+      { error: errorMessages.schedule.lessonNotFound },
+      { status: 404 },
+    );
   }
   if (result === "topicNotFound") {
-    return NextResponse.json({ error: errorMessages.materials.topicNotFound }, { status: 404 });
+    return NextResponse.json(
+      { error: errorMessages.materials.topicNotFound },
+      { status: 404 },
+    );
   }
   return NextResponse.json({ data: { updated: true } });
 }
@@ -136,11 +177,17 @@ export async function DELETE(request: Request) {
   const params = new URL(request.url).searchParams;
   const studentId = Number(params.get("studentId"));
   const scheduledAt = toInstant(params.get("scheduledAt"));
-  if (!isId(studentId) || !scheduledAt) {
-    return NextResponse.json({ error: errorMessages.schedule.invalidLesson }, { status: 400 });
+  if (!isPositiveInteger(studentId) || !scheduledAt) {
+    return NextResponse.json(
+      { error: errorMessages.schedule.invalidLesson },
+      { status: 400 },
+    );
   }
   if (!(await deleteLesson(studentId, scheduledAt))) {
-    return NextResponse.json({ error: errorMessages.schedule.lessonNotFound }, { status: 404 });
+    return NextResponse.json(
+      { error: errorMessages.schedule.lessonNotFound },
+      { status: 404 },
+    );
   }
   return NextResponse.json({ data: { deleted: true } });
 }

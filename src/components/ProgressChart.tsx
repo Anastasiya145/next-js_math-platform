@@ -17,9 +17,10 @@ import ShowChartIcon from "@mui/icons-material/ShowChart";
 import type { StudentProgressPoint } from "@/lib/db";
 import { PageSection } from "./PageSection";
 import { shade } from "./tones";
+import { useAppLanguage } from "@/lib/LanguageProvider";
 
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("uk-UA", {
+const formatDate = (value: string, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
     timeZone: "Europe/Kyiv",
     day: "numeric",
     month: "short",
@@ -33,30 +34,48 @@ export function ProgressChart({
   studentName: string;
   points: StudentProgressPoint[];
 }) {
-  const graded = points.filter((point) => point.gradedAt !== null && point.score !== null);
+  const { locale, t } = useAppLanguage();
+  const intlLocale =
+    locale === "fr" ? "fr-FR" : locale === "ru" ? "ru-RU" : "uk-UA";
+  const graded = points.filter(
+    (point) => point.gradedAt !== null && point.score !== null,
+  );
   const average = graded.length
     ? graded.reduce((sum, point) => sum + (point.score ?? 0), 0) / graded.length
     : null;
 
   return (
     <PageSection
-      title="Динаміка результатів"
+      title={t("resultTrend")}
       icon={<ShowChartIcon />}
       tone="secondary"
-      subtitle={average === null ? undefined : `Середня оцінка ${average.toFixed(1)}/12`}
+      subtitle={
+        average === null
+          ? undefined
+          : t("averageGrade", {
+              average: new Intl.NumberFormat(locale, {
+                maximumFractionDigits: 1,
+              }).format(average),
+            })
+      }
       empty={graded.length === 0}
-      emptyText="Графік з'явиться після перевірки першої домашньої роботи."
+      emptyText={t("chartEmpty")}
     >
       <LineChart
         height={280}
         hideLegend
-        aria-label={`Прогрес: ${studentName}`}
-        xAxis={[{ scaleType: "point", data: graded.map((point) => formatDate(point.lessonAt)) }]}
+        aria-label={t("progressFor", { name: studentName })}
+        xAxis={[
+          {
+            scaleType: "point",
+            data: graded.map((point) => formatDate(point.lessonAt, intlLocale)),
+          },
+        ]}
         yAxis={[{ min: 0, max: 12 }]}
         series={[
           {
             data: graded.map((point) => point.score),
-            label: "Оцінка (0–12)",
+            label: t("score"),
             showMark: true,
             area: true,
             curve: "monotoneX",
@@ -66,26 +85,28 @@ export function ProgressChart({
       />
       <Accordion disableGutters variant="outlined" sx={{ mt: 2 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography>Показати оцінки списком</Typography>
+          <Typography>{t("showScores")}</Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Дата</TableCell>
-                <TableCell>Домашня робота</TableCell>
-                <TableCell>Результат</TableCell>
+                <TableCell>{t("date")}</TableCell>
+                <TableCell>{t("homeworkLabel")}</TableCell>
+                <TableCell>{t("result")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {points.map((point) => (
                 <TableRow key={`${point.homeworkId}-${point.lessonAt}`}>
-                  <TableCell>{formatDate(point.lessonAt)}</TableCell>
+                  <TableCell>
+                    {formatDate(point.lessonAt, intlLocale)}
+                  </TableCell>
                   <TableCell>{point.title}</TableCell>
                   <TableCell>
                     {point.score === null
-                      ? "Очікує перевірки"
-                      : `${point.score}/12${point.status === "no_homework" ? " · Немає ДЗ" : ""}`}
+                      ? t("waitingGrade")
+                      : `${point.score}/12${point.status === "no_homework" ? ` · ${t("noHomeworkShort")}` : ""}`}
                   </TableCell>
                 </TableRow>
               ))}

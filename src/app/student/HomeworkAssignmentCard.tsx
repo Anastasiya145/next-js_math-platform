@@ -28,6 +28,8 @@ import {
 import { shade, tint, type Tone } from "@/components/tones";
 import { router } from "../router";
 import type { StudentHomeworkItem } from "./types";
+import { useAppLanguage } from "@/lib/LanguageProvider";
+import { translateError } from "@/lib/language-messages";
 
 type Props = {
   homework: StudentHomeworkItem;
@@ -38,15 +40,21 @@ type Props = {
 const isSameFile = (a: File, b: File) =>
   a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
 
-export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props) {
+export function HomeworkAssignmentCard({
+  homework,
+  readOnly,
+  onChanged,
+}: Props) {
+  const { locale, t } = useAppLanguage();
   const [files, setFiles] = useState<File[]>([]);
   const [selectionError, setSelectionError] = useState<string | null>(null);
-  const { busy, error, run, reset } = useAction();
+  const { busy, error, run, reset } = useAction(locale);
   const [pending, setPending] = useState<"upload" | "no-homework" | null>(null);
   const [editing, setEditing] = useState(false);
   const { submission } = homework;
   // A sent work stays editable until the teacher grades it.
-  const canEdit = !readOnly && Boolean(submission.status) && !submission.gradedAt;
+  const canEdit =
+    !readOnly && Boolean(submission.status) && !submission.gradedAt;
   const showPicker = !readOnly && (!submission.status || editing);
   const tone: Tone = submission.gradedAt
     ? "success"
@@ -86,7 +94,7 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
       }
     }
     setFiles(next);
-    setSelectionError(problem);
+    setSelectionError(problem ? translateError(problem, locale) : null);
   };
 
   const removeFile = (file: File) => {
@@ -110,6 +118,7 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
         api(router.api.homeworkSubmission(homework.id), {
           body,
           fallback: errorMessages.homework.uploadFailed,
+          locale,
         }),
       )
     ) {
@@ -126,6 +135,7 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
         api(router.api.homeworkNoHomework(homework.id), {
           method: "POST",
           fallback: errorMessages.homework.noHomeworkSaveFailed,
+          locale,
         }),
       )
     ) {
@@ -139,23 +149,44 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
       sx={{
         borderLeft: `6px solid ${shade(tone)}`,
         background: `linear-gradient(135deg, ${tint(tone, 9)}, transparent 55%), var(--mui-palette-background-paper)`,
+        minWidth: 0,
       }}
     >
       <CardHeader
         title={homework.title}
         subheader={
           submission.gradedAt
-            ? "Перевірено"
-            : `Здати до: ${formatDue(homework.nextLessonAt, homework.dueAt)}`
+            ? t("checked")
+            : t("due", {
+                date: formatDue(homework.nextLessonAt, homework.dueAt, locale),
+              })
         }
         action={
-          submission.score !== null && <Chip color={scoreTone} label={`${submission.score}/12`} />
+          submission.score !== null && (
+            <Chip color={scoreTone} label={`${submission.score}/12`} />
+          )
         }
-        slotProps={{ title: { variant: "h6", component: "h3" } }}
+        slotProps={{
+          title: {
+            variant: "h6",
+            component: "h3",
+            sx: { minWidth: 0, overflowWrap: "anywhere" },
+          },
+        }}
+        sx={{
+          minWidth: 0,
+          "& .MuiCardHeader-content": { minWidth: 0 },
+          "& .MuiCardHeader-action": { flexShrink: 0, alignSelf: "flex-start" },
+          "& .MuiCardHeader-subheader": { overflowWrap: "anywhere" },
+        }}
       />
-      <CardContent sx={{ pt: 0 }}>
+      <CardContent sx={{ pt: 0, minWidth: 0 }}>
         <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
-          {homework.instructions && <Typography>{homework.instructions}</Typography>}
+          {homework.instructions && (
+            <Typography sx={{ maxWidth: "100%", overflowWrap: "anywhere" }}>
+              {homework.instructions}
+            </Typography>
+          )}
           {homework.resourceUrl && (
             <Button
               size="small"
@@ -164,39 +195,57 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
               target="_blank"
               rel="noopener noreferrer"
             >
-              Матеріали ДЗ
+              {t("homeworkMaterials")}
             </Button>
           )}
           {submission.status === "submitted" && (
-            <Alert severity="info" sx={{ width: "100%" }}>
+            <Alert
+              severity="info"
+              sx={{ width: "100%", minWidth: 0, overflowWrap: "anywhere" }}
+            >
               {submission.files.length > 0
-                ? `Надіслано: ${submission.files.map((file) => file.name).join(", ")}`
-                : "Роботу надіслано"}
-              {!submission.gradedAt && " · чекає перевірки"}
+                ? t("sentFiles", {
+                    files: submission.files.map((file) => file.name).join(", "),
+                  })
+                : t("workSubmitted")}
+              {!submission.gradedAt && t("waitingReview")}
             </Alert>
           )}
           {submission.status === "no_homework" && (
-            <Alert severity="warning" sx={{ width: "100%" }}>
-              Позначено «Немає ДЗ» · 0 балів
+            <Alert
+              severity="warning"
+              sx={{ width: "100%", minWidth: 0, overflowWrap: "anywhere" }}
+            >
+              {t("noHomeworkStatus")}
             </Alert>
           )}
           {submission.gradedAt && submission.feedback && (
-            <Alert severity="success" sx={{ width: "100%" }}>
-              Коментар вчителя: {submission.feedback}
+            <Alert
+              severity="success"
+              sx={{ width: "100%", minWidth: 0, overflowWrap: "anywhere" }}
+            >
+              {t("teacherComment", { feedback: submission.feedback })}
             </Alert>
           )}
           {error && (
-            <Alert severity="error" sx={{ width: "100%" }}>
+            <Alert
+              severity="error"
+              sx={{ width: "100%", minWidth: 0, overflowWrap: "anywhere" }}
+            >
               {error}
             </Alert>
           )}
           {editing && (
             <Typography variant="body2" color="text.secondary">
-              Нові файли замінять надіслані раніше.
+              {t("replacementHint")}
             </Typography>
           )}
           {showPicker && files.length > 0 && (
-            <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1, maxWidth: "100%" }}>
+            <Stack
+              direction="row"
+              useFlexGap
+              sx={{ flexWrap: "wrap", gap: 1, maxWidth: "100%" }}
+            >
               {files.map((file) => (
                 <Chip
                   key={`${file.name}-${file.size}-${file.lastModified}`}
@@ -209,7 +258,10 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
             </Stack>
           )}
           {selectionError && (
-            <Alert severity="warning" sx={{ width: "100%" }}>
+            <Alert
+              severity="warning"
+              sx={{ width: "100%", minWidth: 0, overflowWrap: "anywhere" }}
+            >
               {selectionError}
             </Alert>
           )}
@@ -217,8 +269,12 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
       </CardContent>
       {canEdit && !editing && (
         <CardActions sx={{ px: 2, pb: 2 }}>
-          <Button variant="outlined" startIcon={<EditIcon />} onClick={() => setEditing(true)}>
-            Змінити роботу
+          <Button
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={() => setEditing(true)}
+          >
+            {t("editWork")}
           </Button>
         </CardActions>
       )}
@@ -230,7 +286,7 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
             startIcon={<AttachFileIcon />}
             disabled={busy}
           >
-            {files.length > 0 ? "Додати ще файли" : "Обрати файли"}
+            {files.length > 0 ? t("addMoreFiles") : t("chooseFiles")}
             <input
               hidden
               multiple
@@ -249,19 +305,24 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
             onClick={upload}
           >
             {editing
-              ? "Зберегти зміни"
+              ? t("saveChanges")
               : files.length > 1
-                ? `Надіслати роботу (${files.length})`
-                : "Надіслати роботу"}
+                ? t("sendWorkCount", { count: files.length })
+                : t("sendWork")}
           </Button>
           {editing ? (
-            <Button variant="text" color="inherit" disabled={busy} onClick={cancelEditing}>
-              Скасувати
+            <Button
+              variant="text"
+              color="inherit"
+              disabled={busy}
+              onClick={cancelEditing}
+            >
+              {t("cancel")}
             </Button>
           ) : (
             <>
               <Typography variant="body2" color="text.secondary">
-                або
+                {t("or")}
               </Typography>
               <Button
                 variant="outlined"
@@ -270,7 +331,7 @@ export function HomeworkAssignmentCard({ homework, readOnly, onChanged }: Props)
                 disabled={busy}
                 onClick={noHomework}
               >
-                Немає ДЗ · 0 балів
+                {t("noHomeworkButton")}
               </Button>
             </>
           )}

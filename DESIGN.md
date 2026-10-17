@@ -2,7 +2,7 @@
 
 ## Product feel
 
-The interface is a focused workbench for a mathematics tutor: calm enough for repeated daily use, warm enough to feel supportive, and structured enough to keep student work easy to scan. It should feel encouraging without looking like a children's game or a generic enterprise dashboard.
+The teacher interface is a focused workbench for a mathematics tutor: calm enough for repeated daily use, warm enough to feel supportive, and structured enough to keep student work easy to scan. Student branding follows the assigned product: mathematics uses the Ukrainian math identity; language learning uses a distinct identity with French and Russian interface variants.
 
 The tutor's next useful action should be easy to find. Group information by real tasks such as reviewing work, managing learners, organizing materials, and tracking classes. Use emphasis to clarify priority, not to decorate every panel.
 
@@ -27,7 +27,7 @@ The desktop application uses a persistent drawer with a constrained content area
 
 ## Typography and content
 
-The application UI is Ukrainian. Use short, direct labels; name actions by their result (for example, adding a student or opening materials). Keep headings in sentence case. Typography is defined in the MUI theme (Roboto); do not introduce external font requests or per-page font overrides casually.
+The teacher and mathematics interfaces are Ukrainian. Language-learning student pages and login support French and Russian. Use short, direct labels; name actions by their result (for example, adding a student or opening materials). Keep headings in sentence case. Typography is defined in the MUI theme (Roboto); do not introduce external font requests or per-page font overrides casually.
 
 ## Reusable patterns
 

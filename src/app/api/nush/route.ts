@@ -12,6 +12,11 @@ import {
   updateNushTopicMaterial,
 } from "@/lib/db";
 import { NUSH_SPLIT_GRADE, isSplitSubject } from "@/lib/nush";
+import {
+  isHttpUrl,
+  isIntegerInRange,
+  isPositiveInteger,
+} from "@/lib/validation";
 
 type PostBody = {
   action?:
@@ -35,21 +40,22 @@ type PostBody = {
   materialId?: number;
 };
 
-const isValidHttpUrl = (value: string) => {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-};
-
-const MATERIAL_TYPES = ["google_drive", "naurok", "pdf", "doc", "link", "other"] as const;
+const MATERIAL_TYPES = [
+  "google_drive",
+  "naurok",
+  "pdf",
+  "doc",
+  "link",
+  "other",
+] as const;
 
 export async function GET(request: Request) {
   const teacher = await getTeacherUser();
   if (!teacher) {
-    return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+    return NextResponse.json(
+      { error: errorMessages.common.accessDenied },
+      { status: 403 },
+    );
   }
 
   const { searchParams } = new URL(request.url);
@@ -57,14 +63,20 @@ export async function GET(request: Request) {
   const topicId = searchParams.get("topicId");
 
   const gradeNum = Number(grade);
-  if (!Number.isInteger(gradeNum) || gradeNum < 1 || gradeNum > 11) {
-    return NextResponse.json({ error: errorMessages.materials.invalidGrade }, { status: 400 });
+  if (!isIntegerInRange(gradeNum, 1, 11)) {
+    return NextResponse.json(
+      { error: errorMessages.materials.invalidGrade },
+      { status: 400 },
+    );
   }
 
   if (topicId) {
     const topicIdNum = Number(topicId);
-    if (!Number.isInteger(topicIdNum) || topicIdNum < 1) {
-      return NextResponse.json({ error: errorMessages.common.invalidId }, { status: 400 });
+    if (!isPositiveInteger(topicIdNum)) {
+      return NextResponse.json(
+        { error: errorMessages.common.invalidId },
+        { status: 400 },
+      );
     }
     const materials = await getNushTopicMaterials(topicIdNum);
     return NextResponse.json({ data: materials });
@@ -77,13 +89,19 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const teacher = await getTeacherUser();
   if (!teacher) {
-    return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+    return NextResponse.json(
+      { error: errorMessages.common.accessDenied },
+      { status: 403 },
+    );
   }
 
   const body = (await request.json().catch(() => null)) as PostBody | null;
 
   if (!body?.action) {
-    return NextResponse.json({ error: errorMessages.materials.actionRequired }, { status: 400 });
+    return NextResponse.json(
+      { error: errorMessages.materials.actionRequired },
+      { status: 400 },
+    );
   }
 
   if (body.action === "create-topic") {
@@ -91,13 +109,7 @@ export async function POST(request: Request) {
     const title = body.title?.trim();
     const description = body.description?.trim() ?? "";
 
-    if (
-      typeof grade !== "number" ||
-      !Number.isInteger(grade) ||
-      grade < 1 ||
-      grade > 11 ||
-      !title
-    ) {
+    if (!isIntegerInRange(grade, 1, 11) || !title) {
       return NextResponse.json(
         { error: errorMessages.materials.topicGradeAndTitleRequired },
         { status: 400 },
@@ -106,7 +118,10 @@ export async function POST(request: Request) {
 
     const split = grade >= NUSH_SPLIT_GRADE;
     if (split && !isSplitSubject(body.subject)) {
-      return NextResponse.json({ error: errorMessages.materials.invalidSubject }, { status: 400 });
+      return NextResponse.json(
+        { error: errorMessages.materials.invalidSubject },
+        { status: 400 },
+      );
     }
 
     try {
@@ -130,26 +145,30 @@ export async function POST(request: Request) {
     const topicId = body.topicId;
     const name = body.material?.name?.trim();
     const url = body.material?.url?.trim();
-    const materialType = MATERIAL_TYPES.find((type) => type === body.material?.materialType);
+    const materialType = MATERIAL_TYPES.find(
+      (type) => type === body.material?.materialType,
+    );
 
-    if (
-      typeof topicId !== "number" ||
-      !Number.isInteger(topicId) ||
-      !name ||
-      !url ||
-      !isValidHttpUrl(url)
-    ) {
+    if (!isPositiveInteger(topicId) || !name || !url || !isHttpUrl(url)) {
       return NextResponse.json(
         { error: errorMessages.materials.topicMaterialRequired },
         { status: 400 },
       );
     }
     if (!materialType) {
-      return NextResponse.json({ error: errorMessages.materials.invalidType }, { status: 400 });
+      return NextResponse.json(
+        { error: errorMessages.materials.invalidType },
+        { status: 400 },
+      );
     }
 
     try {
-      const material = await addNushTopicMaterial({ topicId, name, url, materialType });
+      const material = await addNushTopicMaterial({
+        topicId,
+        name,
+        url,
+        materialType,
+      });
       return NextResponse.json({ data: material }, { status: 201 });
     } catch {
       return NextResponse.json(
@@ -169,10 +188,13 @@ export async function POST(request: Request) {
       );
     }
     if (body.subject !== undefined && !isSplitSubject(body.subject)) {
-      return NextResponse.json({ error: errorMessages.materials.invalidSubject }, { status: 400 });
+      return NextResponse.json(
+        { error: errorMessages.materials.invalidSubject },
+        { status: 400 },
+      );
     }
     const updated =
-      Number.isInteger(body.topicId) &&
+      isPositiveInteger(body.topicId) &&
       (await updateNushTopic({
         topicId: Number(body.topicId),
         title,
@@ -180,7 +202,10 @@ export async function POST(request: Request) {
         subject: isSplitSubject(body.subject) ? body.subject : undefined,
       }));
     if (!updated) {
-      return NextResponse.json({ error: errorMessages.materials.topicNotFound }, { status: 404 });
+      return NextResponse.json(
+        { error: errorMessages.materials.topicNotFound },
+        { status: 404 },
+      );
     }
     return NextResponse.json({ data: { id: body.topicId } });
   }
@@ -188,18 +213,23 @@ export async function POST(request: Request) {
   if (body.action === "update-material") {
     const name = body.material?.name?.trim();
     const url = body.material?.url?.trim();
-    const materialType = MATERIAL_TYPES.find((type) => type === body.material?.materialType);
-    if (!name || name.length > 160 || !url || !isValidHttpUrl(url)) {
+    const materialType = MATERIAL_TYPES.find(
+      (type) => type === body.material?.materialType,
+    );
+    if (!name || name.length > 160 || !url || !isHttpUrl(url)) {
       return NextResponse.json(
         { error: errorMessages.materials.fileNameAndUrlRequired },
         { status: 400 },
       );
     }
     if (!materialType) {
-      return NextResponse.json({ error: errorMessages.materials.invalidType }, { status: 400 });
+      return NextResponse.json(
+        { error: errorMessages.materials.invalidType },
+        { status: 400 },
+      );
     }
     const updated =
-      Number.isInteger(body.materialId) &&
+      isPositiveInteger(body.materialId) &&
       (await updateNushTopicMaterial({
         materialId: Number(body.materialId),
         name,
@@ -207,7 +237,10 @@ export async function POST(request: Request) {
         materialType,
       }));
     if (!updated) {
-      return NextResponse.json({ error: errorMessages.materials.fileNotFound }, { status: 404 });
+      return NextResponse.json(
+        { error: errorMessages.materials.fileNotFound },
+        { status: 404 },
+      );
     }
     return NextResponse.json({ data: { id: body.materialId } });
   }
@@ -215,29 +248,44 @@ export async function POST(request: Request) {
   if (body.action === "delete-material") {
     const materialId = body.materialId;
     if (!materialId) {
-      return NextResponse.json({ error: errorMessages.common.invalidId }, { status: 400 });
+      return NextResponse.json(
+        { error: errorMessages.common.invalidId },
+        { status: 400 },
+      );
     }
 
     try {
       await deleteNushTopicMaterial(materialId);
       return NextResponse.json({ success: true });
     } catch {
-      return NextResponse.json({ error: errorMessages.materials.deleteFailed }, { status: 500 });
+      return NextResponse.json(
+        { error: errorMessages.materials.deleteFailed },
+        { status: 500 },
+      );
     }
   }
 
   if (body.action === "delete-topic") {
     if (!body.topicId) {
-      return NextResponse.json({ error: errorMessages.materials.topicNotFound }, { status: 400 });
+      return NextResponse.json(
+        { error: errorMessages.materials.topicNotFound },
+        { status: 400 },
+      );
     }
 
     try {
       await deleteNushTopic(body.topicId);
       return NextResponse.json({ success: true });
     } catch {
-      return NextResponse.json({ error: errorMessages.materials.deleteFailed }, { status: 500 });
+      return NextResponse.json(
+        { error: errorMessages.materials.deleteFailed },
+        { status: 500 },
+      );
     }
   }
 
-  return NextResponse.json({ error: errorMessages.common.unknownAction }, { status: 400 });
+  return NextResponse.json(
+    { error: errorMessages.common.unknownAction },
+    { status: 400 },
+  );
 }

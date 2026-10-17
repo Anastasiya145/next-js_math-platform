@@ -8,7 +8,13 @@ import {
 import { hashPassword } from "@/lib/passwords";
 import { getTeacherUser } from "@/lib/authz";
 import { errorMessages, errorCodes } from "@/lib/error-messages";
-import { validateEmail, validatePassword } from "@/lib/validation";
+import {
+  isIntegerInRange,
+  isPositiveInteger,
+  validateEmail,
+  validatePassword,
+} from "@/lib/validation";
+import { isLanguageCode, type SiteType } from "@/lib/languages";
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -41,6 +47,9 @@ export async function POST(request: Request) {
     grade?: number;
     email?: string;
     temporaryPassword?: string;
+    siteType?: unknown;
+    baseLanguage?: unknown;
+    targetLanguage?: unknown;
   } | null;
 
   const name = typeof body?.name === "string" ? body.name.trim() : "";
@@ -49,18 +58,28 @@ export async function POST(request: Request) {
     typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const temporaryPassword =
     typeof body?.temporaryPassword === "string" ? body.temporaryPassword : "";
+  const siteType = body?.siteType;
+  const validSiteType = siteType === "math" || siteType === "languages";
+  const languagePairInvalid =
+    siteType === "languages" &&
+    (!isLanguageCode(body?.baseLanguage) ||
+      !isLanguageCode(body?.targetLanguage) ||
+      body.baseLanguage === body.targetLanguage);
   const fieldErrors = {
     name: !name
       ? errorMessages.students.nameRequired
       : name.length > 120
         ? errorMessages.students.nameTooLong
         : undefined,
-    grade:
-      !Number.isInteger(grade) || grade < 1 || grade > 11
-        ? errorMessages.students.gradeRange
-        : undefined,
+    grade: !isIntegerInRange(grade, 1, 11)
+      ? errorMessages.students.gradeRange
+      : undefined,
     email: validateEmail(email) ?? undefined,
     temporaryPassword: validatePassword(temporaryPassword) ?? undefined,
+    siteType: validSiteType ? undefined : errorMessages.students.productInvalid,
+    languagePair: languagePairInvalid
+      ? errorMessages.students.languagePairInvalid
+      : undefined,
   };
 
   if (Object.values(fieldErrors).some(Boolean)) {
@@ -78,6 +97,15 @@ export async function POST(request: Request) {
     const student = await createStudentAccount({
       name,
       grade,
+      siteType: siteType as SiteType,
+      baseLanguage:
+        siteType === "languages" && isLanguageCode(body?.baseLanguage)
+          ? body.baseLanguage
+          : null,
+      targetLanguage:
+        siteType === "languages" && isLanguageCode(body?.targetLanguage)
+          ? body.targetLanguage
+          : null,
       email,
       passwordSalt: password.salt,
       passwordHash: password.hash,
@@ -132,6 +160,9 @@ export async function PATCH(request: Request) {
     grade?: number;
     email?: string;
     temporaryPassword?: string;
+    siteType?: unknown;
+    baseLanguage?: unknown;
+    targetLanguage?: unknown;
   } | null;
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const grade = Number(body?.grade);
@@ -139,16 +170,22 @@ export async function PATCH(request: Request) {
     typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const temporaryPassword =
     typeof body?.temporaryPassword === "string" ? body.temporaryPassword : "";
+  const siteType = body?.siteType;
+  const validSiteType = siteType === "math" || siteType === "languages";
+  const languagePairInvalid =
+    siteType === "languages" &&
+    (!isLanguageCode(body?.baseLanguage) ||
+      !isLanguageCode(body?.targetLanguage) ||
+      body.baseLanguage === body.targetLanguage);
   const fieldErrors = {
     name: !name
       ? errorMessages.students.nameRequired
       : name.length > 120
         ? errorMessages.students.nameTooLong
         : undefined,
-    grade:
-      !Number.isInteger(grade) || grade < 1 || grade > 11
-        ? errorMessages.students.gradeRange
-        : undefined,
+    grade: !isIntegerInRange(grade, 1, 11)
+      ? errorMessages.students.gradeRange
+      : undefined,
     email:
       (body?.email !== undefined && typeof body.email !== "string"
         ? errorMessages.students.emailMustBeText
@@ -158,11 +195,14 @@ export async function PATCH(request: Request) {
       typeof body.temporaryPassword !== "string"
         ? errorMessages.students.passwordMustBeText
         : validatePassword(temporaryPassword, false)) ?? undefined,
+    siteType: validSiteType ? undefined : errorMessages.students.productInvalid,
+    languagePair: languagePairInvalid
+      ? errorMessages.students.languagePairInvalid
+      : undefined,
   };
 
   if (
-    !Number.isInteger(studentId) ||
-    studentId < 1 ||
+    !isPositiveInteger(studentId) ||
     Object.values(fieldErrors).some(Boolean)
   ) {
     return NextResponse.json(
@@ -180,6 +220,15 @@ export async function PATCH(request: Request) {
       studentId,
       name,
       grade,
+      siteType: siteType as SiteType,
+      baseLanguage:
+        siteType === "languages" && isLanguageCode(body?.baseLanguage)
+          ? body.baseLanguage
+          : null,
+      targetLanguage:
+        siteType === "languages" && isLanguageCode(body?.targetLanguage)
+          ? body.targetLanguage
+          : null,
       email,
       passwordSalt: password?.salt,
       passwordHash: password?.hash,

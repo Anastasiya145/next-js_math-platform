@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { errorMessages } from "@/lib/error-messages";
 import { getTeacherUser } from "@/lib/authz";
 import { gradeHomework, isHomeworkAssignedToStudent } from "@/lib/db";
+import { isIntegerInRange, isPositiveInteger } from "@/lib/validation";
 
 export async function PATCH(
   request: Request,
@@ -24,13 +25,9 @@ export async function PATCH(
   const score = Number(body?.score);
   const feedback = body?.feedback?.trim() ?? "";
   if (
-    !Number.isInteger(homeworkId) ||
-    homeworkId < 1 ||
-    !Number.isInteger(studentId) ||
-    studentId < 1 ||
-    !Number.isInteger(score) ||
-    score < 0 ||
-    score > 12 ||
+    !isPositiveInteger(homeworkId) ||
+    !isPositiveInteger(studentId) ||
+    !isIntegerInRange(score, 0, 12) ||
     feedback.length > 2000
   ) {
     return NextResponse.json(

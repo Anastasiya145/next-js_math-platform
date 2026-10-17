@@ -7,6 +7,8 @@ import { signOut, useSession } from "next-auth/react";
 import {
   AppBar,
   Avatar,
+  Alert,
+  Button,
   Box,
   Container,
   Drawer,
@@ -17,13 +19,14 @@ import {
   Menu,
   MenuItem,
   Stack,
+  Snackbar,
   Toolbar,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import AssignmentIcon from "@mui/icons-material/AssignmentOutlined";
 import CalendarIcon from "@mui/icons-material/CalendarMonthOutlined";
 import DashboardIcon from "@mui/icons-material/DashboardOutlined";
-import FunctionsIcon from "@mui/icons-material/Functions";
 import MenuBookIcon from "@mui/icons-material/MenuBookOutlined";
 import MenuIcon from "@mui/icons-material/Menu";
 import PeopleIcon from "@mui/icons-material/PeopleOutlined";
@@ -31,6 +34,8 @@ import { navItems, router } from "@/app/router";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { DriveStatusAlert } from "./DriveStatusAlert";
 import { glass, glow, gradientOf, shade, tint, type Tone } from "./tones";
+import { useAppLanguage } from "@/lib/LanguageProvider";
+import { SiteLogo } from "./SiteLogo";
 
 const DRAWER_WIDTH = 256;
 const NAV: Record<string, { icon: ReactNode; tone: Tone }> = {
@@ -51,10 +56,24 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-export function AppShell({ title, subtitle, actions, children }: AppShellProps) {
+export function AppShell({
+  title,
+  subtitle,
+  actions,
+  children,
+}: AppShellProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const {
+    locale,
+    t,
+    switchLanguage,
+    switching,
+    switchError,
+    clearSwitchError,
+  } = useAppLanguage();
   const isStudent = session?.user.role === "student";
+  const isLanguageStudent = isStudent && session?.user.siteType === "languages";
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [passwordOpen, setPasswordOpen] = useState(false);
@@ -63,7 +82,8 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
     <List sx={{ px: 1.5, py: 2 }}>
       {navItems.map(({ href, label }) => {
         const { icon, tone } = NAV[href];
-        const selected = href === router.home ? pathname === href : pathname.startsWith(href);
+        const selected =
+          href === router.home ? pathname === href : pathname.startsWith(href);
         return (
           <ListItemButton
             key={href}
@@ -95,7 +115,10 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
             >
               {icon}
             </Avatar>
-            <ListItemText primary={label} slotProps={{ primary: { sx: { fontWeight: 600 } } }} />
+            <ListItemText
+              primary={label}
+              slotProps={{ primary: { sx: { fontWeight: 600 } } }}
+            />
           </ListItemButton>
         );
       })}
@@ -127,25 +150,23 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
               <MenuIcon />
             </IconButton>
           )}
-          <Avatar
-            variant="rounded"
-            sx={{
-              mr: 1.5,
-              width: 38,
-              height: 38,
-              color: white,
-              background: HERO_GRADIENT,
-              boxShadow: glow("primary", 70),
-            }}
-          >
-            <FunctionsIcon />
-          </Avatar>
-          <Typography variant="h6" component="span" noWrap sx={{ flexGrow: 1 }}>
-            Математика{" "}
-            <Box component="span" sx={{ color: "secondary.main" }}>
-              з Анастасією
-            </Box>
-          </Typography>
+          <SiteLogo size="header" sx={{ flexGrow: 1, minWidth: 0, mr: 1.5 }} />
+          {isLanguageStudent && (
+            <Tooltip
+              title={locale === "fr" ? t("switchToRu") : t("switchToFr")}
+            >
+              <Button
+                size="small"
+                variant="outlined"
+                aria-label={locale === "fr" ? t("switchToRu") : t("switchToFr")}
+                disabled={switching}
+                onClick={() => void switchLanguage()}
+                sx={{ minWidth: 44, px: 1, mr: 0.5 }}
+              >
+                {locale === "fr" ? "RU" : "FR"}
+              </Button>
+            </Tooltip>
+          )}
           <Typography
             variant="body2"
             color="text.secondary"
@@ -153,7 +174,10 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
           >
             {session?.user.name}
           </Typography>
-          <IconButton aria-label="Профіль" onClick={(event) => setMenuAnchor(event.currentTarget)}>
+          <IconButton
+            aria-label={isLanguageStudent ? t("profile") : "Профіль"}
+            onClick={(event) => setMenuAnchor(event.currentTarget)}
+          >
             <Avatar
               sx={{
                 width: 36,
@@ -177,10 +201,12 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
                   setPasswordOpen(true);
                 }}
               >
-                Змінити пароль
+                {t("changePassword")}
               </MenuItem>
             )}
-            <MenuItem onClick={() => signOut({ redirectTo: router.login })}>Вийти</MenuItem>
+            <MenuItem onClick={() => signOut({ redirectTo: router.login })}>
+              {t("logout")}
+            </MenuItem>
           </Menu>
         </Toolbar>
       </AppBar>
@@ -190,7 +216,10 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
           <Drawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
-            sx={{ display: { md: "none" }, "& .MuiDrawer-paper": { width: DRAWER_WIDTH } }}
+            sx={{
+              display: { md: "none" },
+              "& .MuiDrawer-paper": { width: DRAWER_WIDTH },
+            }}
           >
             <Toolbar />
             {nav}
@@ -293,7 +322,18 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
           {children}
         </Container>
       </Box>
-      {passwordOpen && <ChangePasswordDialog onClose={() => setPasswordOpen(false)} />}
+      {passwordOpen && (
+        <ChangePasswordDialog onClose={() => setPasswordOpen(false)} />
+      )}
+      <Snackbar
+        open={Boolean(switchError)}
+        autoHideDuration={5000}
+        onClose={clearSwitchError}
+      >
+        <Alert severity="error" onClose={clearSwitchError}>
+          {switchError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Chip, Stack, TextField } from "@mui/material";
+import { Button, Chip, Stack } from "@mui/material";
 import DescriptionIcon from "@mui/icons-material/DescriptionOutlined";
 import { downloadFile } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
 import { MAX_REPORT_DAYS } from "@/lib/report";
 import { addDays, monthRange, shiftMonth, todayKyiv } from "@/lib/schedule";
 import { FormDialog } from "@/components/FormDialog";
+import { DateField } from "@/components/DateField";
 import { router } from "../router";
 
 type Props = { studentId: number; studentName: string };
@@ -20,10 +21,16 @@ function periodErrors(from: string, to: string) {
   if (!to) return { to: errorMessages.report.toRequired };
   if (from > to) return { to: errorMessages.report.rangeOrder };
   const days = (Date.parse(to) - Date.parse(from)) / DAY_MS + 1;
-  return days > MAX_REPORT_DAYS ? { to: errorMessages.report.rangeTooLong } : {};
+  return days > MAX_REPORT_DAYS
+    ? { to: errorMessages.report.rangeTooLong }
+    : {};
 }
 
-function ReportDialog({ studentId, studentName, onClose }: Props & { onClose: () => void }) {
+function ReportDialog({
+  studentId,
+  studentName,
+  onClose,
+}: Props & { onClose: () => void }) {
   const today = todayKyiv();
   const month = today.slice(0, 7);
   const [from, setFrom] = useState(`${month}-01`);
@@ -44,15 +51,13 @@ function ReportDialog({ studentId, studentName, onClose }: Props & { onClose: ()
     onChange: (value: string) => void,
     error?: string,
   ) => (
-    <TextField
+    <DateField
       label={label}
-      type="date"
       required
       value={value}
       onChange={(event) => onChange(event.target.value)}
       error={Boolean(error)}
       helperText={error}
-      slotProps={{ inputLabel: { shrink: true } }}
       sx={{ flex: 1 }}
     />
   );
@@ -98,7 +103,11 @@ export function ReportAction(props: Props) {
 
   return (
     <>
-      <Button variant="contained" startIcon={<DescriptionIcon />} onClick={() => setOpen(true)}>
+      <Button
+        variant="contained"
+        startIcon={<DescriptionIcon />}
+        onClick={() => setOpen(true)}
+      >
         Звіт
       </Button>
       {open && <ReportDialog {...props} onClose={() => setOpen(false)} />}

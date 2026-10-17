@@ -10,8 +10,10 @@ export const router = {
   api: {
     students: "/api/students",
     student: (studentId: number) => `/api/students?id=${studentId}`,
-    studentDriveFolder: (studentId: number) => `/api/students/${studentId}/drive-folder`,
-    studentSchedule: (studentId: number) => `/api/students/${studentId}/schedule`,
+    studentDriveFolder: (studentId: number) =>
+      `/api/students/${studentId}/drive-folder`,
+    studentSchedule: (studentId: number) =>
+      `/api/students/${studentId}/schedule`,
     studentReport: (studentId: number) => `/api/students/${studentId}/report`,
     schedule: "/api/schedule",
     payments: "/api/payments",
@@ -21,10 +23,14 @@ export const router = {
     textbook: (textbookId: number) => `/api/textbooks/${textbookId}`,
     assignments: "/api/assignments",
     assignment: (homeworkId: number) => `/api/assignments/${homeworkId}`,
-    homeworkSubmission: (homeworkId: number) => `/api/assignments/${homeworkId}/submission`,
-    homeworkNoHomework: (homeworkId: number) => `/api/assignments/${homeworkId}/no-homework`,
-    homeworkGrade: (homeworkId: number) => `/api/assignments/${homeworkId}/grade`,
+    homeworkSubmission: (homeworkId: number) =>
+      `/api/assignments/${homeworkId}/submission`,
+    homeworkNoHomework: (homeworkId: number) =>
+      `/api/assignments/${homeworkId}/no-homework`,
+    homeworkGrade: (homeworkId: number) =>
+      `/api/assignments/${homeworkId}/grade`,
     studentDashboard: "/api/student/dashboard",
+    studentLanguage: "/api/student/language",
     driveStatus: "/api/teacher/drive-status",
     drivePicker: "/api/teacher/drive-picker",
     changePassword: "/api/student/change-password",
