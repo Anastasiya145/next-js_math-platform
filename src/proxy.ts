@@ -11,7 +11,7 @@ export default auth((req) => {
   const userSite = req.auth?.user?.siteType;
   const isCorrectSite =
     role === "teacher"
-      ? siteVariant === "math"
+      ? true
       : role === "student"
         ? userSite === siteVariant
         : false;

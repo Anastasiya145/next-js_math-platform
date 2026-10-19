@@ -1,4 +1,5 @@
 import { authErrorMessages, errorMessages } from "@/lib/error-messages";
+import { siteVariant } from "@/lib/site-variant";
 import { LoginForm } from "./LoginForm";
 
 const googleLoginConfigured = Boolean(
@@ -16,9 +17,14 @@ export default async function LoginPage({
   const { error } = await searchParams;
   const message = error
     ? (authErrorMessages[error] ?? errorMessages.auth.loginFailed)
-    : googleLoginConfigured
-      ? null
-      : errorMessages.auth.googleSetup;
+    : !googleLoginConfigured && siteVariant === "math"
+      ? errorMessages.auth.googleSetup
+      : null;
 
-  return <LoginForm googleLoginConfigured={googleLoginConfigured} message={message} />;
+  return (
+    <LoginForm
+      googleLoginConfigured={googleLoginConfigured}
+      message={message}
+    />
+  );
 }

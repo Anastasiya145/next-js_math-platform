@@ -22,9 +22,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang={
-        siteVariant === "languages" && session?.user.siteType === "languages"
-          ? session.user.uiLanguage
-          : siteConfig.defaultLocale
+        session?.user.role === "teacher"
+          ? "uk"
+          : siteVariant === "languages" &&
+              session?.user.siteType === "languages"
+            ? session.user.uiLanguage
+            : siteConfig.defaultLocale
       }
       className={roboto.variable}
     >

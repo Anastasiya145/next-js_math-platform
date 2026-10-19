@@ -20,5 +20,5 @@ export async function getStudentUser() {
 
 export async function getTeacherUser() {
   const user = await getCurrentUser();
-  return siteVariant === "math" && user?.role === "teacher" ? user : null;
+  return user?.role === "teacher" ? user : null;
 }

@@ -143,17 +143,18 @@ export function LoginForm({
   );
   const [studentLanguage, setStudentLanguage] = useState<AppLocale>("fr");
   const [googleBusy, setGoogleBusy] = useState(false);
-  const locale: AppLocale =
-    siteVariant === "languages" ? studentLanguage : "uk";
   const languageSite = siteVariant === "languages";
+  const locale: AppLocale =
+    languageSite && role === "student" ? studentLanguage : "uk";
   const t = (key: TranslationKey) => translate(locale, key);
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    document.title = languageSite
-      ? translate(locale, "languageBrand")
-      : "Математика з Анастасією";
-  }, [locale, languageSite]);
+    document.title =
+      languageSite && role === "student"
+        ? translate(locale, "languageBrand")
+        : "Математика з Анастасією";
+  }, [locale, languageSite, role]);
 
   return (
     <Box
@@ -255,17 +256,16 @@ export function LoginForm({
                 {translateError(message, locale)}
               </Alert>
             )}
-            {siteVariant === "math" ? (
-              <Tabs
-                value={role}
-                onChange={(_, value: "teacher" | "student") => setRole(value)}
-                variant="fullWidth"
-                sx={{ mb: 3 }}
-              >
-                <Tab value="teacher" label={t("teacherRole")} />
-                <Tab value="student" label={t("studentRole")} />
-              </Tabs>
-            ) : (
+            <Tabs
+              value={role}
+              onChange={(_, value: "teacher" | "student") => setRole(value)}
+              variant="fullWidth"
+              sx={{ mb: 3 }}
+            >
+              <Tab value="teacher" label={t("teacherRole")} />
+              <Tab value="student" label={t("studentRole")} />
+            </Tabs>
+            {languageSite && role === "student" && (
               <Stack spacing={1.5} sx={{ mb: 2, alignItems: "flex-end" }}>
                 <Typography
                   variant="body2"
@@ -297,23 +297,26 @@ export function LoginForm({
                   locale="uk"
                   uiLanguage="uk"
                 />
-                <Divider>{t("or")}</Divider>
-                <Button
-                  fullWidth
-                  size="large"
-                  variant="outlined"
-                  startIcon={<GoogleIcon />}
-                  disabled={!googleLoginConfigured}
-                  loading={googleBusy}
-                  onClick={() => {
-                    setGoogleBusy(true);
-                    signIn("google", { redirectTo: router.home }).catch(() =>
-                      setGoogleBusy(false),
-                    );
-                  }}
-                >
-                  {t("googleSignIn")}
-                </Button>
+                {googleLoginConfigured && (
+                  <>
+                    <Divider>{t("or")}</Divider>
+                    <Button
+                      fullWidth
+                      size="large"
+                      variant="outlined"
+                      startIcon={<GoogleIcon />}
+                      loading={googleBusy}
+                      onClick={() => {
+                        setGoogleBusy(true);
+                        signIn("google", { redirectTo: router.home }).catch(
+                          () => setGoogleBusy(false),
+                        );
+                      }}
+                    >
+                      {t("googleSignIn")}
+                    </Button>
+                  </>
+                )}
               </Stack>
             ) : (
               <PasswordLogin

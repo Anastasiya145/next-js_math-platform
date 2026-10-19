@@ -147,10 +147,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         adminEmail && userEmail && adminEmail === userEmail,
       );
       if (account?.provider === "teacher-credentials") {
-        return siteVariant === "math" && user.role === "teacher" && isAdmin;
+        return user.role === "teacher" && isAdmin;
       }
       if (account?.provider !== "google") return false;
-      return siteVariant === "math" && isAdmin;
+      return isAdmin;
     },
     async jwt({ token, user, account, trigger, session }) {
       if (user) {
