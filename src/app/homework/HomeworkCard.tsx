@@ -39,7 +39,9 @@ export function HomeworkCard({ homework, students, onChanged }: Props) {
   const [editing, setEditing] = useState(false);
   const status = homeworkStatus(homework);
   const tone = status.tone;
-  const studentNames = homework.students.map((student) => student.name).join(", ");
+  const studentNames = homework.students
+    .map((student) => student.name)
+    .join(", ");
 
   return (
     <ActionRow
@@ -74,11 +76,30 @@ export function HomeworkCard({ homework, students, onChanged }: Props) {
         </>
       }
     >
-      <Accordion disableGutters variant="outlined" sx={{ borderLeft: `6px solid ${shade(tone)}` }}>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+      <Accordion
+        disableGutters
+        variant="outlined"
+        sx={{ borderLeft: `6px solid ${shade(tone)}` }}
+      >
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+          sx={{
+            justifyContent: "space-between",
+            "& .MuiAccordionSummary-content": {
+              minWidth: 0,
+              flexWrap: { xs: "wrap", sm: "nowrap" },
+            },
+            "& .MuiAccordionSummary-expandIconWrapper": { flexShrink: 0 },
+          }}
+        >
           <Avatar
             variant="rounded"
-            sx={{ mr: 1.5, alignSelf: "center", bgcolor: tint(tone, 16), color: shade(tone) }}
+            sx={{
+              mr: 1.5,
+              alignSelf: "center",
+              bgcolor: tint(tone, 16),
+              color: shade(tone),
+            }}
           >
             <AssignmentIcon />
           </Avatar>
@@ -91,21 +112,43 @@ export function HomeworkCard({ homework, students, onChanged }: Props) {
           <Stack
             direction="row"
             spacing={0.5}
-            sx={{ mr: 1, alignSelf: "center", alignItems: "center", maxWidth: "50%" }}
+            sx={{
+              mr: { xs: 0, sm: 1 },
+              alignSelf: "center",
+              alignItems: "center",
+              minWidth: 0,
+              maxWidth: { xs: "100%", sm: "50%" },
+              flex: { xs: "1 1 100%", sm: "0 1 auto" },
+              flexWrap: { xs: "wrap", sm: "nowrap" },
+            }}
           >
             <Chip
               size="small"
               variant="outlined"
               title={studentNames}
               label={studentNames}
-              sx={{ minWidth: 0 }}
+              sx={{
+                minWidth: 0,
+                maxWidth: "100%",
+                "& .MuiChip-label": {
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                },
+              }}
             />
-            <Chip size="small" color={tone} label={status.label} sx={{ flexShrink: 0 }} />
+            <Chip
+              size="small"
+              color={tone}
+              label={status.label}
+              sx={{ flexShrink: 0 }}
+            />
           </Stack>
         </AccordionSummary>
         <AccordionDetails>
           {homework.instructions && (
-            <Typography sx={{ whiteSpace: "pre-wrap", mb: 1 }}>{homework.instructions}</Typography>
+            <Typography sx={{ whiteSpace: "pre-wrap", mb: 1 }}>
+              {homework.instructions}
+            </Typography>
           )}
           {homework.resourceUrl && (
             <Button
@@ -122,7 +165,11 @@ export function HomeworkCard({ homework, students, onChanged }: Props) {
           {homework.students.map((student, index) => (
             <Fragment key={student.id}>
               {index > 0 && <Divider />}
-              <HomeworkStudentRow homeworkId={homework.id} student={student} onGraded={onChanged} />
+              <HomeworkStudentRow
+                homeworkId={homework.id}
+                student={student}
+                onGraded={onChanged}
+              />
             </Fragment>
           ))}
         </AccordionDetails>
