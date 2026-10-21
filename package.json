@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:system-ca": "node --use-system-ca node_modules/next/dist/bin/next dev",
     "db:migrate:neon": "node --use-system-ca --env-file=.env scripts/apply-neon-migrations.mjs",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
