@@ -200,6 +200,12 @@ export const errorMessages = {
     refreshFailed: "Не вдалося оновити навчальні матеріали",
     studentNotFound: "учня не знайдено",
   },
+  telegram: {
+    notConfigured: "Telegram-сповіщення ще не налаштовано",
+    statusFailed: "Не вдалося перевірити підключення Telegram",
+    linkFailed: "Не вдалося створити посилання для Telegram",
+    unlinkFailed: "Не вдалося відключити Telegram",
+  },
 } as const;
 
 export const authErrorMessages: Readonly<Record<string, string>> = {

@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { errorMessages } from "@/lib/error-messages";
 import { getTeacherUser } from "@/lib/authz";
 import { gradeHomework, isHomeworkAssignedToStudent } from "@/lib/db";
+import { notifyHomeworkGraded } from "@/lib/telegram";
 import { isIntegerInRange, isPositiveInteger } from "@/lib/validation";
 
 export async function PATCH(
@@ -47,6 +48,11 @@ export async function PATCH(
       { status: 409 },
     );
   }
+  after(() =>
+    notifyHomeworkGraded({ homeworkId, studentId, score, feedback }).catch(
+      (error) => console.error("Telegram grade notification error:", error),
+    ),
+  );
   return NextResponse.json({
     data: { homeworkId, studentId, score, feedback },
   });

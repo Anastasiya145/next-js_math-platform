@@ -29,6 +29,8 @@ For an interactive API reference, sign in as a teacher and open `/api-docs`. Its
 | `/api/student/dashboard`                    | GET                      | Student: own dashboard. Teacher: pass `?studentId=...` to view a student.  |
 | `/api/student/change-password`              | POST                     | Student: change own password.                                              |
 | `/api/student/language`                     | PATCH                    | Student: update own language preferences.                                  |
+| `/api/student/telegram`                     | GET, POST, DELETE        | Student: Telegram status, create a one-time bot link, unlink.              |
+| `/api/telegram/webhook`                     | POST                     | Telegram Bot API only; requires the webhook secret header.                 |
 | `/api/materials`                            | GET, POST                | Teacher: manage class materials. POST uses an `action` field.              |
 | `/api/nush`                                 | GET, POST                | Teacher: manage NUSH topics and materials. POST uses an `action` field.    |
 | `/api/textbooks`                            | GET, POST                | Teacher: list/create textbooks.                                            |
@@ -202,6 +204,7 @@ The schema is maintained by ordered SQL migrations. Key tables and relationships
 | `material_classes`, `material_topics`, `material_files`                               | Teacher-managed class materials; child topics/files cascade on parent deletion.                                                                                                                 |
 | `student_lesson_slots`, `lessons`                                                     | Recurring weekly slots and dated lesson instances. Lesson status is `planned`, `held`, or `cancelled`. Times are stored as timestamps; recurring slots use Kyiv-local weekday/time conventions. |
 | `student_payments`                                                                    | Payments received for a student; amounts are integer UAH.                                                                                                                                       |
+| `student_telegram`                                                                    | Linked Telegram chat per student and a hashed one-time link token (15 minutes). Used for new-homework and grade notifications.                                                                  |
 | `schema_migrations`                                                                   | Applied migration versions.                                                                                                                                                                     |
 
 For complete columns, constraints, indexes, and migration history, read [`db/migrations/`](../db/migrations/). Notable constraints include grades 1-11, unique case-insensitive student email, unique `(student_id, scheduled_at)` lesson instances, and score range 0-12.

@@ -36,6 +36,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|favicon-math.svg|favicon-languages.svg|icon.svg).*)",
+    "/((?!api/auth|api/telegram/webhook|_next/static|_next/image|favicon.ico|favicon-math.svg|favicon-languages.svg|icon.svg).*)",
   ],
 };

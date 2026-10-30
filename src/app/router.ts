@@ -31,6 +31,7 @@ export const router = {
       `/api/assignments/${homeworkId}/grade`,
     studentDashboard: "/api/student/dashboard",
     studentLanguage: "/api/student/language",
+    studentTelegram: "/api/student/telegram",
     driveStatus: "/api/teacher/drive-status",
     drivePicker: "/api/teacher/drive-picker",
     changePassword: "/api/student/change-password",

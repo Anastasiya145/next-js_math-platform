@@ -45,6 +45,9 @@ Keep secrets in the git-ignored `.env` or `.env.local`; never commit them or sha
 | `NEXT_PUBLIC_SITE_VARIANT`             | Required on Vercel: `math` or `languages`                    |
 | `GOOGLE_PICKER_API_KEY`                | Browser API key for Google Picker (optional, folder linking) |
 | `GOOGLE_PROJECT_NUMBER`                | Google Cloud project number used as the Picker app ID        |
+| `TELEGRAM_BOT_TOKEN`                   | Bot token from @BotFather (optional, notifications)          |
+| `TELEGRAM_BOT_USERNAME`                | Bot username without `@`; shows the Telegram section         |
+| `TELEGRAM_WEBHOOK_SECRET`              | Random `A-Za-z0-9_-` string checked on webhook requests      |
 
 The teacher email allowed to sign in is also set in `src/auth.ts`. If both `.env` and `.env.local` exist, remove blank values from `.env.local`, because it has higher priority. Restart the dev server after changing variables.
 
@@ -72,6 +75,17 @@ With the `drive.file` scope the app only sees files it created or that the teach
 4. Restart the server, open `/students`, click the folder icon on a student, and choose the folder. Later submissions from that student go into it.
 
 On Windows, if Auth.js logs `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, use `npm run dev:system-ca` instead of disabling TLS verification.
+
+## Telegram notifications
+
+Students link Telegram from their cabinet and receive new homework and grades there.
+
+1. Create a bot with @BotFather, run `npm run db:migrate:neon`, and set the three `TELEGRAM_*` variables in both Vercel projects.
+2. Register the webhook once, pointing at the mathematics deployment:
+
+   ```powershell
+   Invoke-RestMethod -Method Post "https://api.telegram.org/bot$env:TELEGRAM_BOT_TOKEN/setWebhook" -Body @{ url = "https://<math-domain>/api/telegram/webhook"; secret_token = $env:TELEGRAM_WEBHOOK_SECRET; allowed_updates = '["message"]' }
+   ```
 
 ## Vercel deployments
 

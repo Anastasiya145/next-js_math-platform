@@ -21,6 +21,7 @@ import { router } from "../router";
 import { HomeworkAssignmentCard } from "./HomeworkAssignmentCard";
 import { ReportAction } from "./ReportAction";
 import { StudentTextbookList } from "./StudentTextbookList";
+import { TelegramConnect } from "./TelegramConnect";
 import type { StudentDashboardData, StudentHomeworkItem } from "./types";
 import { useAppLanguage } from "@/lib/LanguageProvider";
 
@@ -167,6 +168,7 @@ export function StudentCabinet({ studentId }: Props) {
               />
             </Grid>
           </Grid>
+          {!teacherView && <TelegramConnect />}
           <PageSection
             title={t("textbooks")}
             subtitle={t("forGrade", { grade: data.student.grade })}

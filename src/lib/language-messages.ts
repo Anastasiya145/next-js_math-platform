@@ -128,6 +128,28 @@ const messages = {
     errorEmailTooLong: "Email має містити не більше {count} символів.",
     showPassword: "Показати пароль",
     hidePassword: "Приховати пароль",
+    telegramTitle: "Сповіщення в Telegram",
+    telegramDescription:
+      "Отримуйте нові домашні завдання та оцінки в Telegram.",
+    telegramConnect: "Підключити Telegram",
+    telegramOpenBot: "Відкрити бота",
+    telegramOpenHint:
+      "Відкрийте бота й натисніть «Start». Посилання діє 15 хвилин.",
+    telegramCheck: "Перевірити підключення",
+    telegramLinkedStatus: "Telegram підключено",
+    telegramDisconnect: "Відключити",
+    telegramNewHomework: "Нове домашнє завдання: «{title}»",
+    telegramGraded: "Роботу «{title}» перевірено. Оцінка: {score}/12",
+    telegramLinked:
+      "Telegram підключено. Сюди надходитимуть нові домашні завдання та оцінки.",
+    telegramLinkInvalid:
+      "Посилання недійсне або застаріло. Створіть нове в кабінеті на сайті.",
+    telegramHelp:
+      "Я надсилаю сповіщення про домашні завдання та оцінки. Надіслати роботу можна в кабінеті на сайті.",
+    errorTelegramNotConfigured: "Telegram-сповіщення ще не налаштовано.",
+    errorTelegramStatus: "Не вдалося перевірити підключення Telegram.",
+    errorTelegramLink: "Не вдалося створити посилання для Telegram.",
+    errorTelegramUnlink: "Не вдалося відключити Telegram.",
   },
   fr: {
     languageBrand: "Langues avec Anastasia",
@@ -263,6 +285,29 @@ const messages = {
       "L'adresse e-mail ne doit pas dépasser {count} caractères.",
     showPassword: "Afficher le mot de passe",
     hidePassword: "Masquer le mot de passe",
+    telegramTitle: "Notifications Telegram",
+    telegramDescription:
+      "Recevez les nouveaux devoirs et les notes dans Telegram.",
+    telegramConnect: "Connecter Telegram",
+    telegramOpenBot: "Ouvrir le bot",
+    telegramOpenHint:
+      "Ouvrez le bot et appuyez sur « Start ». Le lien est valable 15 minutes.",
+    telegramCheck: "Vérifier la connexion",
+    telegramLinkedStatus: "Telegram connecté",
+    telegramDisconnect: "Déconnecter",
+    telegramNewHomework: "Nouveau devoir : « {title} »",
+    telegramGraded: "Le travail « {title} » a été corrigé. Note : {score}/12",
+    telegramLinked:
+      "Telegram est connecté. Vous recevrez ici les nouveaux devoirs et les notes.",
+    telegramLinkInvalid:
+      "Ce lien n'est plus valide. Créez-en un nouveau dans votre espace élève.",
+    telegramHelp:
+      "J'envoie des notifications sur les devoirs et les notes. Vous pouvez envoyer votre travail depuis votre espace élève.",
+    errorTelegramNotConfigured:
+      "Les notifications Telegram ne sont pas encore configurées.",
+    errorTelegramStatus: "Impossible de vérifier la connexion Telegram.",
+    errorTelegramLink: "Impossible de créer le lien Telegram.",
+    errorTelegramUnlink: "Impossible de déconnecter Telegram.",
   },
   ru: {
     languageBrand: "Языки с Анастасией",
@@ -389,6 +434,27 @@ const messages = {
       "Адрес электронной почты не должен превышать {count} символов.",
     showPassword: "Показать пароль",
     hidePassword: "Скрыть пароль",
+    telegramTitle: "Уведомления в Telegram",
+    telegramDescription: "Получайте новые задания и оценки в Telegram.",
+    telegramConnect: "Подключить Telegram",
+    telegramOpenBot: "Открыть бота",
+    telegramOpenHint:
+      "Откройте бота и нажмите «Start». Ссылка действует 15 минут.",
+    telegramCheck: "Проверить подключение",
+    telegramLinkedStatus: "Telegram подключён",
+    telegramDisconnect: "Отключить",
+    telegramNewHomework: "Новое домашнее задание: «{title}»",
+    telegramGraded: "Работа «{title}» проверена. Оценка: {score}/12",
+    telegramLinked:
+      "Telegram подключён. Сюда будут приходить новые задания и оценки.",
+    telegramLinkInvalid:
+      "Ссылка недействительна или устарела. Создайте новую в кабинете на сайте.",
+    telegramHelp:
+      "Я присылаю уведомления о заданиях и оценках. Отправить работу можно в кабинете на сайте.",
+    errorTelegramNotConfigured: "Уведомления в Telegram ещё не настроены.",
+    errorTelegramStatus: "Не удалось проверить подключение Telegram.",
+    errorTelegramLink: "Не удалось создать ссылку для Telegram.",
+    errorTelegramUnlink: "Не удалось отключить Telegram.",
   },
 } as const;
 
@@ -441,6 +507,10 @@ const errorKeys: Array<[string, TranslationKey]> = [
   [errorMessages.drive.folderIdMissing, "errorDriveFolderId"],
   [errorMessages.drive.uploadRejected, "errorDriveUpload"],
   [errorMessages.drive.fileIdMissing, "errorDriveFile"],
+  [errorMessages.telegram.notConfigured, "errorTelegramNotConfigured"],
+  [errorMessages.telegram.statusFailed, "errorTelegramStatus"],
+  [errorMessages.telegram.linkFailed, "errorTelegramLink"],
+  [errorMessages.telegram.unlinkFailed, "errorTelegramUnlink"],
 ];
 
 export function translateError(message: string, locale: AppLocale): string {

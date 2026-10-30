@@ -1569,3 +1569,114 @@ export async function saveTeacherGoogleToken(input: {
       updated_at = NOW()
   `;
 }
+
+function toAppLocale(value: unknown): AppLocale {
+  return value === "fr" || value === "ru" ? value : "uk";
+}
+
+export async function isStudentTelegramLinked(
+  studentId: number,
+): Promise<boolean> {
+  const rows = (await getDb()`
+    SELECT 1 FROM student_telegram
+    WHERE student_id = ${studentId} AND chat_id IS NOT NULL
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function saveStudentTelegramLinkToken(
+  studentId: number,
+  tokenHash: string,
+  expiresAt: Date,
+): Promise<void> {
+  await getDb()`
+    INSERT INTO student_telegram (student_id, link_token_hash, link_token_expires_at)
+    VALUES (${studentId}, ${tokenHash}, ${expiresAt.toISOString()})
+    ON CONFLICT (student_id) DO UPDATE SET
+      link_token_hash = EXCLUDED.link_token_hash,
+      link_token_expires_at = EXCLUDED.link_token_expires_at
+  `;
+}
+
+// Consumes a one-time link token; returns null when it is unknown or expired.
+export async function linkStudentTelegram(
+  tokenHash: string,
+  chatId: string,
+): Promise<{ studentId: number; uiLanguage: AppLocale } | null> {
+  const rows = (await getDb()`
+    UPDATE student_telegram AS t
+    SET chat_id = ${chatId}, linked_at = NOW(),
+        link_token_hash = NULL, link_token_expires_at = NULL
+    FROM students AS s
+    WHERE t.link_token_hash = ${tokenHash}
+      AND t.link_token_expires_at > NOW()
+      AND s.id = t.student_id
+    RETURNING t.student_id, s.ui_language
+  `) as DatabaseRow[];
+  return rows[0]
+    ? {
+        studentId: Number(rows[0].student_id),
+        uiLanguage: toAppLocale(rows[0].ui_language),
+      }
+    : null;
+}
+
+export async function unlinkStudentTelegram(studentId: number): Promise<void> {
+  await getDb()`
+    UPDATE student_telegram
+    SET chat_id = NULL, linked_at = NULL
+    WHERE student_id = ${studentId}
+  `;
+}
+
+export async function unlinkTelegramChat(chatId: string): Promise<void> {
+  await getDb()`
+    UPDATE student_telegram
+    SET chat_id = NULL, linked_at = NULL
+    WHERE chat_id = ${chatId}
+  `;
+}
+
+export async function getTelegramChatLocale(
+  chatId: string,
+): Promise<AppLocale | null> {
+  const rows = (await getDb()`
+    SELECT s.ui_language
+    FROM student_telegram AS t JOIN students AS s ON s.id = t.student_id
+    WHERE t.chat_id = ${chatId}
+    ORDER BY t.linked_at DESC
+    LIMIT 1
+  `) as DatabaseRow[];
+  return rows[0] ? toAppLocale(rows[0].ui_language) : null;
+}
+
+export type TelegramHomeworkRecipient = {
+  chatId: string;
+  locale: AppLocale;
+  title: string;
+  dueAt: string | null;
+  nextLessonAt: string | null;
+};
+
+export async function listTelegramHomeworkRecipients(
+  homeworkId: number,
+  studentIds: number[],
+): Promise<TelegramHomeworkRecipient[]> {
+  const rows = (await getDb()`
+    SELECT t.chat_id, s.ui_language, h.title, h.due_at, h.next_lesson_at
+    FROM homework_students AS hs
+    JOIN homeworks AS h ON h.id = hs.homework_id
+    JOIN students AS s ON s.id = hs.student_id
+    JOIN student_telegram AS t ON t.student_id = hs.student_id
+    WHERE hs.homework_id = ${homeworkId}
+      AND hs.student_id = ANY(${studentIds}::int[])
+      AND t.chat_id IS NOT NULL
+  `) as DatabaseRow[];
+  return rows.map((row) => ({
+    chatId: String(row.chat_id),
+    locale: toAppLocale(row.ui_language),
+    title: String(row.title),
+    dueAt: toTimestamp(row.due_at),
+    nextLessonAt: toTimestamp(row.next_lesson_at),
+  }));
+}

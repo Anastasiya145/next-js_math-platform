@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { errorMessages } from "@/lib/error-messages";
 import { getStudentUser, getTeacherUser } from "@/lib/authz";
 import {
@@ -6,6 +6,7 @@ import {
   listHomeworkForStudent,
   listHomeworkForTeacher,
 } from "@/lib/db";
+import { notifyHomeworkAssigned } from "@/lib/telegram";
 import { isHttpUrl, isPositiveInteger } from "@/lib/validation";
 
 export async function GET() {
@@ -82,6 +83,11 @@ export async function POST(request: Request) {
       createdBy: teacher.email ?? "teacher",
       studentIds,
     });
+    after(() =>
+      notifyHomeworkAssigned(id, studentIds).catch((error) =>
+        console.error("Telegram homework notification error:", error),
+      ),
+    );
     return NextResponse.json({ data: { id } }, { status: 201 });
   } catch (error) {
     if (

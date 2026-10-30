@@ -25,6 +25,7 @@ Student accounts default to the mathematics product in Ukrainian. The current la
 - Progress is shown in chronological order by the date of the lesson the homework was for (not by when it was submitted or graded), with an average and a table alternative. Unchecked submissions are not treated as grades.
 - The teacher's Drive receives a separate folder per student on the student's first upload. Drive access requires the Google Drive API, the `drive.file` scope, and a new Google consent after the scope is added.
 - The student portal shows textbooks and practice links matching the student's class, active and graded homework, the next lesson date, average score, and an accessible progress chart. Teachers manage class-specific textbook links from Materials.
+- A student can link Telegram from their cabinet through a one-time bot link. A linked student receives a Telegram message when homework is assigned and when it is graded, in their interface language. Submissions still go through the site.
 
 ## Lessons and reports
 
