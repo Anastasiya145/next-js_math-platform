@@ -32,6 +32,15 @@ This is a tutoring workspace with a shared teacher dashboard and two student-fac
 - Read `DESIGN.md` for the established visual direction and current UI constraints.
 - Load `frontend-design` only for new or substantially changed visual direction. Load `ui-ux-pro-max` for a specific UX question in an established interface. Do not load both by default.
 
+## Task workflows
+
+- For a bug, regression, or unexpected behavior, follow `.agents/skills/fix-bug/SKILL.md`.
+- For a requested review or pre-merge check, follow `.agents/skills/pre-merge-review/SKILL.md`; report findings before summaries and do not change code unless asked.
+- For an audit of code against project requirements or conventions, follow `.agents/skills/project-compliance/SKILL.md`; report verified, violated, and unchecked rules without changing code unless asked.
+- For explicit publishing requests, follow `.agents/skills/push-deploy-both/SKILL.md`.
+- For database work, use the matching Neon or backend-database skill under `.agents/skills/`.
+- Keep workflow skills scoped to repeatable task procedures. Product rules, architecture, and UI conventions remain defined by these instructions, `PRODUCT.md`, `DESIGN.md`, and the relevant code.
+
 ## Validation
 
 Run commands from the repository root. Use `npm run lint` for linting and `npm run build` for a production build when the change warrants it. There is no test script currently defined in `package.json`; do not imply a test suite ran when it did not.
