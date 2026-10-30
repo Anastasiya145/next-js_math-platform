@@ -25,9 +25,18 @@ export default function StudentsPage() {
   );
   const [editing, setEditing] = useState<{ student?: Student } | null>(null);
   const students = data ?? [];
-  const byGrade = Object.entries(
-    Object.groupBy(students, (student) => student.grade),
-  ).sort(([first], [second]) => Number(first) - Number(second));
+  // Math students are grouped by school grade, language students by course level after them.
+  const groupKey = (student: Student) =>
+    student.siteType === "languages"
+      ? `Мови · ${student.languageLevel ?? "без рівня"}`
+      : `${student.grade} клас`;
+  const groupOrder = (student: Student) =>
+    student.siteType === "languages" ? 100 : student.grade;
+  const groups = Object.entries(Object.groupBy(students, groupKey)).sort(
+    ([firstKey, first], [secondKey, second]) =>
+      groupOrder(first![0]) - groupOrder(second![0]) ||
+      firstKey.localeCompare(secondKey),
+  );
 
   return (
     <AppShell
@@ -53,12 +62,16 @@ export default function StudentsPage() {
             emptyText="Поки немає жодного учня"
           />
         )}
-        {byGrade.map(([grade, items], index) => (
+        {groups.map(([group, items], index) => (
           <PageSection
-            key={grade}
-            title={`${grade} клас`}
+            key={group}
+            title={group}
             subtitle={`${items?.length} учн.`}
-            icon={grade}
+            icon={
+              items?.[0]?.siteType === "languages"
+                ? (items[0].languageLevel ?? "—")
+                : items?.[0]?.grade
+            }
             tone={toneAt(index)}
           >
             <List disablePadding>
@@ -70,7 +83,7 @@ export default function StudentsPage() {
                   primary={student.name}
                   secondary={`${student.email ?? "без входу"} · ${
                     student.siteType === "languages"
-                      ? `Мови: ${student.baseLanguage?.toUpperCase()} → ${student.targetLanguage?.toUpperCase()}`
+                      ? `Мови: ${student.baseLanguage?.toUpperCase()} → ${student.targetLanguage?.toUpperCase()}${student.languageLevel ? ` · ${student.languageLevel}` : ""}`
                       : "Математика · українська"
                   }`}
                   actions={
@@ -92,7 +105,7 @@ export default function StudentsPage() {
                       </IconAction>
                       <DeleteAction
                         label={`Видалити: ${student.name}`}
-                        message={`${student.name} (${student.grade} клас) буде видалено.`}
+                        message={`${student.name} (${groupKey(student)}) буде видалено.`}
                         onConfirm={async () => {
                           await api(router.api.student(student.id), {
                             method: "DELETE",

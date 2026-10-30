@@ -1,3 +1,5 @@
+import type { LanguageLevel, StudentCourseTopic } from "@/lib/language-course";
+
 export type StudentHomeworkItem = {
   id: number;
   title: string;
@@ -7,6 +9,7 @@ export type StudentHomeworkItem = {
   nextLessonAt: string | null;
   createdAt: string;
   isDemo: boolean;
+  topic: { id: number; title: string } | null;
   submission: {
     status: "submitted" | "no_homework" | null;
     files: Array<{ id: number; name: string }>;
@@ -18,7 +21,14 @@ export type StudentHomeworkItem = {
 };
 
 export type StudentDashboardData = {
-  student: { id: number; name: string; grade: number };
+  student: {
+    id: number;
+    name: string;
+    grade: number;
+    languageLevel: LanguageLevel | null;
+  };
+  // Language students only; null for mathematics.
+  course: StudentCourseTopic[] | null;
   textbooks: Array<{
     id: number;
     grade: number;

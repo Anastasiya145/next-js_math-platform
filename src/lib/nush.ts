@@ -9,11 +9,21 @@ export const NUSH_SUBJECT_LABELS: Record<NushSubject, string> = {
   geometry: "Геометрія",
 };
 
-export const NUSH_SPLIT_SUBJECTS = ["algebra", "geometry"] as const satisfies NushSubject[];
+export const NUSH_SPLIT_SUBJECTS = [
+  "algebra",
+  "geometry",
+] as const satisfies NushSubject[];
 
-export const isSplitSubject = (value: unknown): value is (typeof NUSH_SPLIT_SUBJECTS)[number] =>
+export const isSplitSubject = (
+  value: unknown,
+): value is (typeof NUSH_SPLIT_SUBJECTS)[number] =>
   NUSH_SPLIT_SUBJECTS.some((subject) => subject === value);
 
-// "Алгебра: Лінійні рівняння" for the split grades, the bare title for the single math course.
-export const formatTopic = (topic: { title: string; subject: NushSubject }) =>
-  topic.subject === "math" ? topic.title : `${NUSH_SUBJECT_LABELS[topic.subject]}: ${topic.title}`;
+// "Алгебра: Лінійні рівняння" for the split grades, the bare title for the single math course and language topics.
+export const formatTopic = (topic: {
+  title: string;
+  subject: NushSubject | "language";
+}) =>
+  topic.subject === "math" || topic.subject === "language"
+    ? topic.title
+    : `${NUSH_SUBJECT_LABELS[topic.subject]}: ${topic.title}`;

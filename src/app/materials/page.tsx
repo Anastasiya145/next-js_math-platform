@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Box, Tab, Tabs } from "@mui/material";
 import { AppShell } from "@/components/AppShell";
 import { ClassMaterials } from "./ClassMaterials";
+import { LanguageTopicsManager } from "./LanguageTopicsManager";
 import { NushTopicsManager } from "./NushTopicsManager";
 import { TextbookManager } from "./TextbookManager";
 
@@ -11,13 +12,17 @@ const TABS = [
   // { label: "Класи й файли", content: <ClassMaterials /> },
   { label: "Програма НУШ", content: <NushTopicsManager /> },
   { label: "Підручники", content: <TextbookManager /> },
+  { label: "Курс мови", content: <LanguageTopicsManager /> },
 ];
 
 export default function MaterialsPage() {
   const [tab, setTab] = useState(0);
 
   return (
-    <AppShell title="Матеріали" subtitle="Програма НУШ і підручники">
+    <AppShell
+      title="Матеріали"
+      subtitle="Програма НУШ, підручники та курс мови"
+    >
       <Tabs
         value={tab}
         onChange={(_, value: number) => setTab(value)}

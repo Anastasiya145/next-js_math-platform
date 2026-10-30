@@ -1,3 +1,6 @@
+import type { LanguageLevel } from "@/lib/language-course";
+import type { LanguageCode, SiteType } from "@/lib/languages";
+
 export type HomeworkStudentTarget = {
   id: number;
   name: string;
@@ -18,6 +21,7 @@ export type TeacherHomework = {
   dueAt: string | null;
   nextLessonAt: string | null;
   createdAt: string;
+  languageTopicId: number | null;
   students: HomeworkStudentTarget[];
 };
 
@@ -26,4 +30,7 @@ export type HomeworkStudentOption = {
   name: string;
   grade: number;
   email: string | null;
+  siteType?: SiteType;
+  targetLanguage?: LanguageCode | null;
+  languageLevel?: LanguageLevel | null;
 };

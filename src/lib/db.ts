@@ -6,6 +6,14 @@ import { NUSH_SPLIT_GRADE, type NushSubject } from "@/lib/nush";
 import type { PaymentsData } from "@/lib/payments";
 import type { AppLocale, LanguageCode, SiteType } from "@/lib/languages";
 import {
+  isLanguageLevel,
+  type LanguageLevel,
+  type LanguageSection,
+  type LanguageTopic,
+  type LanguageTopicMaterial,
+  type StudentCourseTopic,
+} from "@/lib/language-course";
+import {
   buildLessons,
   findSlotFor,
   type LessonRow,
@@ -61,7 +69,7 @@ function toLessonTopic(
   return {
     id: id == null ? null : Number(id),
     title,
-    subject: subject as NushSubject,
+    subject: subject as LessonTopic["subject"],
   };
 }
 
@@ -90,6 +98,10 @@ function mapStudent(row: DatabaseRow): Student {
         : siteType === "languages"
           ? "fr"
           : "uk",
+    languageLevel:
+      siteType === "languages" && isLanguageLevel(row.language_level)
+        ? row.language_level
+        : null,
   };
 }
 
@@ -110,6 +122,7 @@ export type Student = {
   baseLanguage: LanguageCode | null;
   targetLanguage: LanguageCode | null;
   uiLanguage: AppLocale;
+  languageLevel: LanguageLevel | null;
 };
 
 export type StudentAccount = Student & {
@@ -148,6 +161,7 @@ export type StudentHomework = {
   nextLessonAt: string | null;
   createdAt: string;
   isDemo: boolean;
+  topic: { id: number; title: string } | null;
   submission: HomeworkSubmission;
 };
 
@@ -162,7 +176,11 @@ export type StudentTextbook = {
   isDemo: boolean;
 };
 
-export type HomeworkForTeacher = Omit<StudentHomework, "submission"> & {
+export type HomeworkForTeacher = Omit<
+  StudentHomework,
+  "submission" | "topic"
+> & {
+  languageTopicId: number | null;
   students: Array<{
     id: number;
     name: string;
@@ -279,6 +297,7 @@ export async function createStudentAccount(input: {
   siteType: SiteType;
   baseLanguage: LanguageCode | null;
   targetLanguage: LanguageCode | null;
+  languageLevel: LanguageLevel | null;
   email: string;
   passwordSalt: string;
   passwordHash: string;
@@ -287,13 +306,15 @@ export async function createStudentAccount(input: {
   const rows = (await sql`
     WITH new_student AS (
       INSERT INTO students (
-        name, grade, site_type, base_language, target_language, ui_language
+        name, grade, site_type, base_language, target_language, ui_language, language_level
       )
       VALUES (
         ${input.name}, ${input.grade}, ${input.siteType}, ${input.baseLanguage},
-        ${input.targetLanguage}, ${input.siteType === "languages" ? "fr" : "uk"}
+        ${input.targetLanguage}, ${input.siteType === "languages" ? "fr" : "uk"},
+        ${input.languageLevel}
       )
-      RETURNING id, name, grade, created_at, site_type, base_language, target_language, ui_language
+      RETURNING id, name, grade, created_at, site_type, base_language, target_language,
+        ui_language, language_level
     ), new_account AS (
       INSERT INTO student_accounts (student_id, email, password_salt, password_hash)
       SELECT id, ${input.email.trim().toLowerCase()}, ${input.passwordSalt}, ${input.passwordHash}
@@ -301,7 +322,7 @@ export async function createStudentAccount(input: {
       RETURNING student_id, email
     )
     SELECT s.id, s.name, s.grade, s.created_at, s.site_type, s.base_language,
-           s.target_language, s.ui_language, a.email
+           s.target_language, s.ui_language, s.language_level, a.email
     FROM new_student s JOIN new_account a ON a.student_id = s.id
   `) as DatabaseRow[];
   if (!rows[0]) throw new Error(errorMessages.database.studentCreateFailed);
@@ -331,7 +352,7 @@ export async function findStudentAccount(
 export async function listStudentsWithEmail(): Promise<StudentWithEmail[]> {
   const rows = (await getDb()`
         SELECT s.id, s.name, s.grade, s.created_at, s.site_type, s.base_language,
-          s.target_language, s.ui_language, a.email,
+          s.target_language, s.ui_language, s.language_level, a.email,
            f.drive_folder_id IS NOT NULL AS has_drive_folder
     FROM students s
     LEFT JOIN student_accounts a ON a.student_id = s.id
@@ -351,6 +372,7 @@ export async function updateStudent(input: {
   siteType: SiteType;
   baseLanguage: LanguageCode | null;
   targetLanguage: LanguageCode | null;
+  languageLevel: LanguageLevel | null;
 }): Promise<StudentWithEmail | null> {
   const sql = getDb();
   const existingRows = (await sql`
@@ -382,13 +404,15 @@ export async function updateStudent(input: {
       UPDATE students
       SET name = ${input.name}, grade = ${input.grade}, site_type = ${input.siteType},
           base_language = ${input.baseLanguage}, target_language = ${input.targetLanguage},
+          language_level = ${input.languageLevel},
           ui_language = CASE
             WHEN site_type = ${input.siteType} THEN ui_language
             WHEN ${input.siteType} = 'languages' THEN 'fr'
             ELSE 'uk'
           END
       WHERE id = ${input.studentId}
-      RETURNING id, name, grade, created_at, site_type, base_language, target_language, ui_language
+      RETURNING id, name, grade, created_at, site_type, base_language, target_language,
+        ui_language, language_level
     ), account_write AS (
       INSERT INTO student_accounts (student_id, email, password_salt, password_hash)
       SELECT id, ${email || existingAccount?.email || null},
@@ -402,7 +426,7 @@ export async function updateStudent(input: {
       RETURNING student_id, email
     )
         SELECT s.id, s.name, s.grade, s.created_at, s.site_type, s.base_language,
-          s.target_language, s.ui_language, a.email
+          s.target_language, s.ui_language, s.language_level, a.email
     FROM updated_student s
     LEFT JOIN account_write a ON a.student_id = s.id
   `) as DatabaseRow[];
@@ -425,7 +449,8 @@ export async function getStudentById(
   studentId: number,
 ): Promise<Student | null> {
   const rows = (await getDb()`
-    SELECT id, name, grade, created_at, site_type, base_language, target_language, ui_language
+    SELECT id, name, grade, created_at, site_type, base_language, target_language, ui_language,
+      language_level
     FROM students WHERE id = ${studentId}
   `) as DatabaseRow[];
   return rows[0] ? mapStudent(rows[0]) : null;
@@ -528,21 +553,22 @@ export async function createHomework(input: {
   nextLessonAt: string | null;
   createdBy: string;
   studentIds: number[];
+  languageTopicId: number | null;
 }): Promise<number> {
   const studentIds = [...new Set(input.studentIds)];
   if (studentIds.length === 0)
     throw new Error(errorMessages.database.homeworkStudentRequired);
 
   const studentPlaceholders = studentIds
-    .map((_, index) => `$${index + 7}`)
+    .map((_, index) => `$${index + 8}`)
     .join(", ");
   const query = `
     WITH valid_students AS (
       SELECT id FROM students WHERE id IN (${studentPlaceholders})
     ), new_homework AS (
       INSERT INTO homeworks
-        (title, instructions, resource_url, due_at, next_lesson_at, created_by)
-      SELECT $1, $2, $3, $4, $5::timestamptz, $6
+        (title, instructions, resource_url, due_at, next_lesson_at, created_by, language_topic_id)
+      SELECT $1, $2, $3, $4, $5::timestamptz, $6, $7::integer
       WHERE (SELECT COUNT(*) FROM valid_students) = ${studentIds.length}
       RETURNING id
     ), assignments AS (
@@ -559,6 +585,7 @@ export async function createHomework(input: {
     input.dueAt,
     input.nextLessonAt,
     input.createdBy,
+    input.languageTopicId,
     ...studentIds,
   ])) as DatabaseRow[];
   if (!rows[0]) throw new Error(errorMessages.database.homeworkStudentsMissing);
@@ -570,6 +597,7 @@ export async function listHomeworkForTeacher(): Promise<HomeworkForTeacher[]> {
         SELECT h.id, h.title, h.instructions, h.resource_url AS "resourceUrl",
           h.due_at AS "dueAt", h.next_lesson_at AS "nextLessonAt",
               h.created_at AS "createdAt", h.is_demo AS "isDemo",
+           h.language_topic_id AS "languageTopicId",
            s.id AS "studentId", s.name AS "studentName", s.grade AS "studentGrade",
            sub.status, sub.score, sub.feedback,
            COALESCE((
@@ -601,6 +629,8 @@ export async function listHomeworkForTeacher(): Promise<HomeworkForTeacher[]> {
         nextLessonAt: toTimestamp(row.nextLessonAt),
         createdAt: toTimestamp(row.createdAt) ?? "",
         isDemo: Boolean(row.isDemo),
+        languageTopicId:
+          row.languageTopicId == null ? null : Number(row.languageTopicId),
         students: [],
       };
       homeworks.set(id, homework);
@@ -627,6 +657,7 @@ export async function listHomeworkForStudent(
         SELECT h.id, h.title, h.instructions, h.resource_url AS "resourceUrl",
           h.due_at AS "dueAt", h.next_lesson_at AS "nextLessonAt",
           h.created_at AS "createdAt", h.is_demo AS "isDemo",
+           t.id AS "topicId", t.title AS "topicTitle",
            sub.status, sub.score, sub.feedback,
            COALESCE((
              SELECT json_agg(json_build_object('id', f.id, 'name', f.file_name) ORDER BY f.id)
@@ -636,6 +667,7 @@ export async function listHomeworkForStudent(
            sub.submitted_at AS "submittedAt", sub.graded_at AS "gradedAt"
     FROM homework_students hs
     JOIN homeworks h ON h.id = hs.homework_id
+    LEFT JOIN language_topics t ON t.id = h.language_topic_id
     LEFT JOIN homework_submissions sub
       ON sub.homework_id = h.id AND sub.student_id = hs.student_id
     WHERE hs.student_id = ${studentId}
@@ -651,6 +683,10 @@ export async function listHomeworkForStudent(
     nextLessonAt: toTimestamp(row.nextLessonAt),
     createdAt: toTimestamp(row.createdAt) ?? "",
     isDemo: Boolean(row.isDemo),
+    topic:
+      row.topicId == null
+        ? null
+        : { id: Number(row.topicId), title: String(row.topicTitle) },
     submission: {
       status: row.status as HomeworkSubmission["status"],
       files: toSubmissionFiles(row.files),
@@ -715,6 +751,7 @@ export async function listScheduleStudents(
 ): Promise<ScheduleStudent[]> {
   const rows = (await getDb()`
     SELECT s.id, s.name, s.grade, s.hourly_rate AS "hourlyRate",
+      s.site_type, s.target_language, s.language_level,
       COALESCE((
         SELECT json_agg(json_build_object(
           'weekday', l.weekday,
@@ -736,6 +773,16 @@ export async function listScheduleStudents(
       id: Number(row.id),
       name: String(row.name),
       grade: Number(row.grade),
+      course:
+        row.site_type === "languages" &&
+        (row.target_language === "fr" || row.target_language === "ru")
+          ? {
+              language: row.target_language,
+              level: isLanguageLevel(row.language_level)
+                ? row.language_level
+                : null,
+            }
+          : null,
       hourlyRate: Number(row.hourlyRate),
       slots: toJsonList(row.slots).map(
         (slot): LessonSlot => ({
@@ -762,8 +809,8 @@ export async function listLessons(range: {
     getDb()`
       SELECT student_id AS "studentId", scheduled_at AS "scheduledAt", starts_at AS "startsAt",
              duration_minutes AS "durationMinutes", status, is_extra AS "isExtra",
-             hourly_rate AS "hourlyRate", topic_id AS "topicId", topic_title AS "topicTitle",
-             topic_subject AS "topicSubject"
+             hourly_rate AS "hourlyRate", COALESCE(topic_id, language_topic_id) AS "topicId",
+             topic_title AS "topicTitle", topic_subject AS "topicSubject"
       FROM lessons
       WHERE (starts_at >= ${rangeStart} AND starts_at < ${rangeEnd})
          OR (scheduled_at >= ${rangeStart} AND scheduled_at < ${rangeEnd})
@@ -863,8 +910,8 @@ export async function updateLesson(input: {
   const sql = getDb();
   const rows = (await sql`
     SELECT starts_at AS "startsAt", duration_minutes AS "durationMinutes", status,
-           is_extra AS "isExtra", topic_id AS "topicId", topic_title AS "topicTitle",
-           topic_subject AS "topicSubject"
+           is_extra AS "isExtra", COALESCE(topic_id, language_topic_id) AS "topicId",
+           topic_title AS "topicTitle", topic_subject AS "topicSubject"
     FROM lessons
     WHERE student_id = ${input.studentId} AND scheduled_at = ${input.scheduledAt}
   `) as DatabaseRow[];
@@ -917,24 +964,27 @@ export async function updateLesson(input: {
             )
           : null;
     } else if (input.topicId !== null) {
-      topic = await findLessonTopic(input.topicId);
+      topic = await findLessonTopic(input.studentId, input.topicId);
       if (!topic) return "topicNotFound";
     }
   }
+  const isLanguageTopic = topic?.subject === "language";
 
   await sql`
     INSERT INTO lessons
       (student_id, scheduled_at, starts_at, duration_minutes, status, hourly_rate,
-       topic_id, topic_title, topic_subject)
+       topic_id, language_topic_id, topic_title, topic_subject)
     SELECT ${input.studentId}::integer, ${input.scheduledAt}::timestamptz,
            ${startsAt}::timestamptz, ${durationMinutes}::integer, ${status}::text, s.hourly_rate,
-           ${topic?.id ?? null}::integer, ${topic?.title ?? null}::text,
-           ${topic?.subject ?? null}::text
+           ${isLanguageTopic ? null : (topic?.id ?? null)}::integer,
+           ${isLanguageTopic ? (topic?.id ?? null) : null}::integer,
+           ${topic?.title ?? null}::text, ${topic?.subject ?? null}::text
     FROM students s WHERE s.id = ${input.studentId}
     ON CONFLICT (student_id, scheduled_at) DO UPDATE SET
       starts_at = EXCLUDED.starts_at,
       status = EXCLUDED.status,
       topic_id = EXCLUDED.topic_id,
+      language_topic_id = EXCLUDED.language_topic_id,
       topic_title = EXCLUDED.topic_title,
       topic_subject = EXCLUDED.topic_subject,
       hourly_rate = CASE
@@ -1126,6 +1176,7 @@ export async function updateHomework(input: {
   resourceUrl: string;
   nextLessonAt: string | null;
   studentIds: number[];
+  languageTopicId: number | null;
 }): Promise<HomeworkUpdateResult> {
   const studentIds = [...new Set(input.studentIds)];
   if (studentIds.length === 0)
@@ -1150,15 +1201,16 @@ export async function updateHomework(input: {
   await sql.query(
     `WITH updated AS (
        UPDATE homeworks
-       SET title = $2, instructions = $3, resource_url = $4, next_lesson_at = $5::timestamptz
+       SET title = $2, instructions = $3, resource_url = $4, next_lesson_at = $5::timestamptz,
+           language_topic_id = $6::integer
        WHERE id = $1
        RETURNING id
      ), removed AS (
        DELETE FROM homework_students
-       WHERE homework_id = $1 AND student_id NOT IN (${idList(6)})
+       WHERE homework_id = $1 AND student_id NOT IN (${idList(7)})
      ), added AS (
        INSERT INTO homework_students (homework_id, student_id)
-       SELECT $1, id FROM students WHERE id IN (${idList(6)})
+       SELECT $1, id FROM students WHERE id IN (${idList(7)})
        ON CONFLICT DO NOTHING
      )
      SELECT id FROM updated`,
@@ -1168,6 +1220,7 @@ export async function updateHomework(input: {
       input.instructions,
       input.resourceUrl,
       input.nextLessonAt,
+      input.languageTopicId,
       ...studentIds,
     ],
   );
@@ -1212,9 +1265,19 @@ export async function listNushTopicsForGrade(
   return rows.map(toNushTopic);
 }
 
-async function findLessonTopic(topicId: number): Promise<LessonTopic | null> {
+// Language students take topics from their course, math students from the NUSH list.
+async function findLessonTopic(
+  studentId: number,
+  topicId: number,
+): Promise<LessonTopic | null> {
   const rows = (await getDb()`
-    SELECT id, title, subject FROM nush_topics WHERE id = ${topicId}
+    SELECT t.id, t.title, 'language' AS subject
+    FROM language_topics t JOIN students s ON s.target_language = t.language
+    WHERE s.id = ${studentId} AND s.site_type = 'languages' AND t.id = ${topicId}
+    UNION ALL
+    SELECT n.id, n.title, n.subject
+    FROM nush_topics n JOIN students s ON s.site_type = 'math'
+    WHERE s.id = ${studentId} AND n.id = ${topicId}
   `) as DatabaseRow[];
   return rows[0]
     ? toLessonTopic(rows[0].id, rows[0].title, rows[0].subject)
@@ -1318,6 +1381,162 @@ export async function updateNushTopicMaterial(input: {
     RETURNING id
   `) as DatabaseRow[];
   return rows.length > 0;
+}
+
+// Language course (language -> level -> topics -> materials)
+
+const toLanguageTopic = (row: DatabaseRow): LanguageTopic => ({
+  id: Number(row.id),
+  language: row.language === "fr" ? "fr" : "ru",
+  level: row.level as LanguageLevel,
+  section: row.section as LanguageSection,
+  title: String(row.title),
+  description: String(row.description ?? ""),
+  position: Number(row.position),
+  materials: toJsonList(row.materials).map(
+    (material): LanguageTopicMaterial => ({
+      id: Number(material.id),
+      name: String(material.name),
+      url: String(material.url),
+    }),
+  ),
+});
+
+export async function listLanguageTopics(
+  language: LanguageCode,
+): Promise<LanguageTopic[]> {
+  const rows = (await getDb()`
+    SELECT t.id, t.language, t.level, t.section, t.title, t.description, t.position,
+      COALESCE((
+        SELECT json_agg(json_build_object('id', m.id, 'name', m.name, 'url', m.url) ORDER BY m.id)
+        FROM language_topic_materials m WHERE m.topic_id = t.id
+      ), '[]'::json) AS materials
+    FROM language_topics t
+    WHERE t.language = ${language}
+    ORDER BY t.level, t.position, t.id
+  `) as DatabaseRow[];
+  return rows.map(toLanguageTopic);
+}
+
+export async function languageTopicExists(topicId: number): Promise<boolean> {
+  const rows = (await getDb()`
+    SELECT 1 FROM language_topics WHERE id = ${topicId}
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function createLanguageTopic(input: {
+  language: LanguageCode;
+  level: LanguageLevel;
+  section: LanguageSection;
+  title: string;
+  description: string;
+}): Promise<number> {
+  const rows = (await getDb()`
+    INSERT INTO language_topics (language, level, section, title, description, position)
+    SELECT ${input.language}, ${input.level}, ${input.section}, ${input.title},
+           ${input.description}, COALESCE(MAX(position), 0) + 1
+    FROM language_topics WHERE language = ${input.language} AND level = ${input.level}
+    RETURNING id
+  `) as DatabaseRow[];
+  return Number(rows[0].id);
+}
+
+export async function updateLanguageTopic(input: {
+  topicId: number;
+  level: LanguageLevel;
+  section: LanguageSection;
+  title: string;
+  description: string;
+}): Promise<boolean> {
+  const rows = (await getDb()`
+    UPDATE language_topics
+    SET level = ${input.level}, section = ${input.section}, title = ${input.title},
+        description = ${input.description}
+    WHERE id = ${input.topicId}
+    RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function deleteLanguageTopic(topicId: number): Promise<boolean> {
+  const rows = (await getDb()`
+    DELETE FROM language_topics WHERE id = ${topicId} RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function addLanguageTopicMaterial(input: {
+  topicId: number;
+  name: string;
+  url: string;
+}): Promise<boolean> {
+  const rows = (await getDb()`
+    INSERT INTO language_topic_materials (topic_id, name, url)
+    SELECT id, ${input.name}, ${input.url} FROM language_topics WHERE id = ${input.topicId}
+    RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function updateLanguageTopicMaterial(input: {
+  materialId: number;
+  name: string;
+  url: string;
+}): Promise<boolean> {
+  const rows = (await getDb()`
+    UPDATE language_topic_materials SET name = ${input.name}, url = ${input.url}
+    WHERE id = ${input.materialId}
+    RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+export async function deleteLanguageTopicMaterial(
+  materialId: number,
+): Promise<boolean> {
+  const rows = (await getDb()`
+    DELETE FROM language_topic_materials WHERE id = ${materialId} RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
+}
+
+// Topics of the student's level plus any other topic already taught or assigned to them.
+export async function listStudentCourse(
+  studentId: number,
+): Promise<StudentCourseTopic[]> {
+  const rows = (await getDb()`
+    SELECT t.id, t.language, t.level, t.section, t.title, t.description, t.position,
+      s.language_level AS "studentLevel",
+      COALESCE((
+        SELECT json_agg(json_build_object('id', m.id, 'name', m.name, 'url', m.url) ORDER BY m.id)
+        FROM language_topic_materials m WHERE m.topic_id = t.id
+      ), '[]'::json) AS materials,
+      EXISTS (
+        SELECT 1 FROM lessons l
+        WHERE l.student_id = s.id AND l.language_topic_id = t.id AND l.status = 'held'
+      ) AS studied,
+      (
+        SELECT COUNT(*) FROM homework_students hs JOIN homeworks h ON h.id = hs.homework_id
+        WHERE hs.student_id = s.id AND h.language_topic_id = t.id
+      ) AS "homeworkCount"
+    FROM students s JOIN language_topics t ON t.language = s.target_language
+    WHERE s.id = ${studentId} AND s.site_type = 'languages'
+    ORDER BY t.level, t.position, t.id
+  `) as DatabaseRow[];
+  const studentLevel = rows[0]?.studentLevel;
+  return rows
+    .map((row) => ({
+      ...toLanguageTopic(row),
+      studied: row.studied === true,
+      homeworkCount: Number(row.homeworkCount),
+    }))
+    .filter(
+      (topic) =>
+        topic.level === studentLevel ||
+        topic.studied ||
+        topic.homeworkCount > 0,
+    );
 }
 
 // Class materials (classes -> topics -> files)

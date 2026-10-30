@@ -15,6 +15,7 @@ import {
   validatePassword,
 } from "@/lib/validation";
 import { isLanguageCode, type SiteType } from "@/lib/languages";
+import { isLanguageLevel } from "@/lib/language-course";
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
     siteType?: unknown;
     baseLanguage?: unknown;
     targetLanguage?: unknown;
+    languageLevel?: unknown;
   } | null;
 
   const name = typeof body?.name === "string" ? body.name.trim() : "";
@@ -80,6 +82,10 @@ export async function POST(request: Request) {
     languagePair: languagePairInvalid
       ? errorMessages.students.languagePairInvalid
       : undefined,
+    languageLevel:
+      siteType === "languages" && !isLanguageLevel(body?.languageLevel)
+        ? errorMessages.languageCourse.levelInvalid
+        : undefined,
   };
 
   if (Object.values(fieldErrors).some(Boolean)) {
@@ -105,6 +111,10 @@ export async function POST(request: Request) {
       targetLanguage:
         siteType === "languages" && isLanguageCode(body?.targetLanguage)
           ? body.targetLanguage
+          : null,
+      languageLevel:
+        siteType === "languages" && isLanguageLevel(body?.languageLevel)
+          ? body.languageLevel
           : null,
       email,
       passwordSalt: password.salt,
@@ -163,6 +173,7 @@ export async function PATCH(request: Request) {
     siteType?: unknown;
     baseLanguage?: unknown;
     targetLanguage?: unknown;
+    languageLevel?: unknown;
   } | null;
   const name = typeof body?.name === "string" ? body.name.trim() : "";
   const grade = Number(body?.grade);
@@ -199,6 +210,10 @@ export async function PATCH(request: Request) {
     languagePair: languagePairInvalid
       ? errorMessages.students.languagePairInvalid
       : undefined,
+    languageLevel:
+      siteType === "languages" && !isLanguageLevel(body?.languageLevel)
+        ? errorMessages.languageCourse.levelInvalid
+        : undefined,
   };
 
   if (
@@ -228,6 +243,10 @@ export async function PATCH(request: Request) {
       targetLanguage:
         siteType === "languages" && isLanguageCode(body?.targetLanguage)
           ? body.targetLanguage
+          : null,
+      languageLevel:
+        siteType === "languages" && isLanguageLevel(body?.languageLevel)
+          ? body.languageLevel
           : null,
       email,
       passwordSalt: password?.salt,

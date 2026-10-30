@@ -7,7 +7,7 @@ A tutoring workspace with two student-facing products and a shared teacher dashb
 - Mathematics remains Ukrainian and organizes learners, classes, teaching materials, assigned homework, submissions, grades, and progress.
 - Language learning has a French/Russian interface. Student profiles store their product, base language, learning language, and preferred interface language.
 
-Student accounts default to the mathematics product in Ukrainian. The current language-learning profile is configured for French as the base language and Russian as the learning language. The language site currently reuses the existing student portal and assignment/resource data model; it does not yet provide a separate language-course authoring workflow.
+Student accounts default to the mathematics product in Ukrainian. The current language-learning profile is configured for French as the base language and Russian as the learning language. Language students have a course level (A1–C1) instead of a school grade. The teacher maintains a language course in Materials (topics by level and section: grammar, vocabulary, phonetics, reading, speaking, each with materials); a starter set of Russian A1–A2 topics is seeded. Homework for language students can be linked to a course topic, held lessons take their topic from the course, and the language student portal shows "My course" (topics of their level with materials, studied status, and homework count) instead of grade textbooks.
 
 ## Roles and access
 

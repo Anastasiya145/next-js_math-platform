@@ -206,6 +206,17 @@ export const errorMessages = {
     linkFailed: "Не вдалося створити посилання для Telegram",
     unlinkFailed: "Не вдалося відключити Telegram",
   },
+  languageCourse: {
+    loadFailed: "Не вдалося завантажити теми курсу",
+    saveFailed: "Не вдалося зберегти зміни",
+    deleteFailed: "Не вдалося видалити",
+    invalidLanguage: "оберіть мову курсу",
+    invalidTopic: "вкажіть рівень, розділ і назву теми (до 160 символів)",
+    invalidMaterial: "потрібні назва та коректне посилання (http/https)",
+    topicNotFound: "тему курсу не знайдено",
+    materialNotFound: "матеріал не знайдено",
+    levelInvalid: "Оберіть рівень мови (A1–C1).",
+  },
 } as const;
 
 export const authErrorMessages: Readonly<Record<string, string>> = {

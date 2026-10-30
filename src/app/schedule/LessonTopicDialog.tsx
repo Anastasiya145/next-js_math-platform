@@ -6,13 +6,18 @@ import { useApi } from "@/lib/api";
 import type { NushTopic } from "@/lib/db";
 import { errorMessages } from "@/lib/error-messages";
 import {
+  LANGUAGE_LEVELS,
+  type LanguageLevel,
+  type LanguageTopic,
+} from "@/lib/language-course";
+import {
   NUSH_SPLIT_GRADE,
   NUSH_SPLIT_SUBJECTS,
   NUSH_SUBJECT_LABELS,
   isSplitSubject,
   type NushSubject,
 } from "@/lib/nush";
-import type { LessonTopic } from "@/lib/schedule";
+import type { LessonTopic, StudentCourse } from "@/lib/schedule";
 import { FormDialog } from "@/components/FormDialog";
 import { router } from "../router";
 
@@ -20,33 +25,52 @@ type Props = {
   title: string;
   submitLabel: string;
   grade: number;
+  course: StudentCourse | null;
   current: LessonTopic | null;
   onSubmit: (topicId: number | null) => Promise<unknown>;
   onClose: () => void;
 };
 
-// Picks what was taught from the NUSH topics of the student's grade. From grade 7 the topics are split into algebra and geometry.
+// Picks what was taught: NUSH topics of the student's grade (algebra and geometry from grade 7),
+// or course topics by level for a language student.
 export function LessonTopicDialog({
   title,
   submitLabel,
   grade,
+  course,
   current,
   onSubmit,
   onClose,
 }: Props) {
-  const { data, loading, error } = useApi<NushTopic[]>(
-    `${router.api.nush}?grade=${grade}`,
-    errorMessages.materials.loadFailed,
+  const { data, loading, error } = useApi<Array<NushTopic | LanguageTopic>>(
+    course
+      ? `${router.api.languageTopics}?language=${course.language}`
+      : `${router.api.nush}?grade=${grade}`,
+    course
+      ? errorMessages.languageCourse.loadFailed
+      : errorMessages.materials.loadFailed,
   );
-  const split = grade >= NUSH_SPLIT_GRADE;
+  const split = !course && grade >= NUSH_SPLIT_GRADE;
   const [subject, setSubject] = useState<NushSubject>(
     isSplitSubject(current?.subject) ? current.subject : "algebra",
   );
   const [topicId, setTopicId] = useState(current?.id ? String(current.id) : "");
+  const currentLevel = (data ?? []).find(
+    (topic): topic is LanguageTopic =>
+      "level" in topic && topic.id === current?.id,
+  )?.level;
+  const [chosenLevel, setChosenLevel] = useState<LanguageLevel | null>(null);
+  const level = chosenLevel ?? currentLevel ?? course?.level ?? "A1";
 
-  const topics = (data ?? []).filter((topic) => !split || topic.subject === subject);
+  const topics = (data ?? []).filter((topic) =>
+    "level" in topic
+      ? topic.level === level
+      : !split || topic.subject === subject,
+  );
   // A topic that is not in the list (deleted or from another grade) cannot be shown as selected.
-  const selected = topics.some((topic) => String(topic.id) === topicId) ? topicId : "";
+  const selected = topics.some((topic) => String(topic.id) === topicId)
+    ? topicId
+    : "";
 
   return (
     <FormDialog
@@ -74,6 +98,23 @@ export function LessonTopicDialog({
           ))}
         </TextField>
       )}
+      {course && (
+        <TextField
+          select
+          label="Рівень"
+          value={level}
+          onChange={(event) => {
+            setChosenLevel(event.target.value as LanguageLevel);
+            setTopicId("");
+          }}
+        >
+          {LANGUAGE_LEVELS.map((value) => (
+            <MenuItem key={value} value={value}>
+              {value}
+            </MenuItem>
+          ))}
+        </TextField>
+      )}
       <TextField
         select
         label="Тема уроку"
@@ -87,7 +128,10 @@ export function LessonTopicDialog({
             ? "Тем для цього розділу ще немає. Додайте їх у розділі «Матеріали»"
             : undefined)
         }
-        slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+        slotProps={{
+          select: { displayEmpty: true },
+          inputLabel: { shrink: true },
+        }}
       >
         <MenuItem value="">Без теми</MenuItem>
         {topics.map((topic) => (

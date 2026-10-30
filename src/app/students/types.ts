@@ -1,4 +1,5 @@
 import type { LanguageCode, SiteType, AppLocale } from "@/lib/languages";
+import type { LanguageLevel } from "@/lib/language-course";
 
 export type Student = {
   id: number;
@@ -11,4 +12,5 @@ export type Student = {
   baseLanguage: LanguageCode | null;
   targetLanguage: LanguageCode | null;
   uiLanguage: AppLocale;
+  languageLevel: LanguageLevel | null;
 };

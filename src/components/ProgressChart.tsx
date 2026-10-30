@@ -11,12 +11,13 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { LineChart } from "@mui/x-charts/LineChart";
+import { LineChart, lineClasses } from "@mui/x-charts/LineChart";
+import { ChartsReferenceLine } from "@mui/x-charts/ChartsReferenceLine";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ShowChartIcon from "@mui/icons-material/ShowChart";
 import type { StudentProgressPoint } from "@/lib/db";
 import { PageSection } from "./PageSection";
-import { shade } from "./tones";
+import { shade, tint } from "./tones";
 import { useAppLanguage } from "@/lib/LanguageProvider";
 
 const formatDate = (value: string, locale: string) =>
@@ -25,6 +26,13 @@ const formatDate = (value: string, locale: string) =>
     day: "numeric",
     month: "short",
     year: "2-digit",
+  }).format(new Date(value));
+
+const formatShortDate = (value: string, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
+    timeZone: "Europe/Kyiv",
+    day: "numeric",
+    month: "short",
   }).format(new Date(value));
 
 export function ProgressChart({
@@ -62,27 +70,67 @@ export function ProgressChart({
       emptyText={t("chartEmpty")}
     >
       <LineChart
-        height={280}
+        height={260}
         hideLegend
+        grid={{ horizontal: true }}
+        margin={{ left: 0, right: 16 }}
         aria-label={t("progressFor", { name: studentName })}
         xAxis={[
           {
             scaleType: "point",
-            data: graded.map((point) => formatDate(point.lessonAt, intlLocale)),
+            data: graded.map((point) => point.lessonAt),
+            // Short dates on the axis, the full date in the tooltip.
+            valueFormatter: (value: string, context) =>
+              context.location === "tick"
+                ? formatShortDate(value, intlLocale)
+                : formatDate(value, intlLocale),
+            disableTicks: true,
+            disableLine: true,
+            tickLabelStyle: { fontSize: 12 },
           },
         ]}
-        yAxis={[{ min: 0, max: 12 }]}
+        yAxis={[
+          {
+            min: 0,
+            max: 12,
+            tickInterval: [0, 3, 6, 9, 12],
+            disableTicks: true,
+            disableLine: true,
+            width: 32,
+          },
+        ]}
         series={[
           {
             data: graded.map((point) => point.score),
             label: t("score"),
+            valueFormatter: (value) => (value === null ? "" : `${value}/12`),
             showMark: true,
             area: true,
             curve: "monotoneX",
             color: shade("secondary"),
           },
         ]}
-      />
+        sx={{
+          [`& .${lineClasses.area}`]: { fill: tint("secondary", 12) },
+          [`& .${lineClasses.line}`]: { strokeWidth: 2.5 },
+          [`& .${lineClasses.mark}`]: { strokeWidth: 2, r: 4 },
+          "& .MuiChartsGrid-line": {
+            stroke: "var(--mui-palette-divider)",
+            strokeDasharray: "4 4",
+          },
+        }}
+      >
+        {average !== null && (
+          <ChartsReferenceLine
+            y={average}
+            lineStyle={{
+              stroke: "var(--mui-palette-text-secondary)",
+              strokeDasharray: "6 4",
+              strokeWidth: 1,
+            }}
+          />
+        )}
+      </LineChart>
       <Accordion disableGutters variant="outlined" sx={{ mt: 2 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography>{t("showScores")}</Typography>

@@ -19,6 +19,7 @@ export const router = {
     payments: "/api/payments",
     materials: "/api/materials",
     nush: "/api/nush",
+    languageTopics: "/api/language-topics",
     textbooks: "/api/textbooks",
     textbook: (textbookId: number) => `/api/textbooks/${textbookId}`,
     assignments: "/api/assignments",

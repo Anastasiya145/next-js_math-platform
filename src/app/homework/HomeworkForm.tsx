@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Autocomplete, TextField } from "@mui/material";
-import { api } from "@/lib/api";
+import { Autocomplete, MenuItem, TextField } from "@mui/material";
+import { api, useApi } from "@/lib/api";
 import { errorMessages } from "@/lib/error-messages";
 import { kyivLocalToIso } from "@/lib/format";
+import type { LanguageTopic } from "@/lib/language-course";
 import { FieldsDialog } from "@/components/FieldsDialog";
 import { router } from "../router";
 import { LessonPicker, type LessonChoice } from "./LessonPicker";
@@ -15,29 +16,65 @@ type Props = {
   // Pass an existing assignment to edit it instead of creating a new one.
   homework?: TeacherHomework;
   // Starts a new assignment from an existing material; the lesson date is then optional.
-  prefill?: { title: string; resourceUrl: string };
+  prefill?: { title: string; resourceUrl: string; languageTopicId?: number };
   onSaved: () => Promise<void>;
   onClose: () => void;
 };
 
-export function HomeworkForm({ students, homework, prefill, onSaved, onClose }: Props) {
+const studentLabel = (student: HomeworkStudentOption) =>
+  student.siteType === "languages"
+    ? `${student.name} · мови${student.languageLevel ? ` ${student.languageLevel}` : ""}`
+    : `${student.name} · ${student.grade} клас`;
+
+export function HomeworkForm({
+  students,
+  homework,
+  prefill,
+  onSaved,
+  onClose,
+}: Props) {
   const [selected, setSelected] = useState<HomeworkStudentOption[]>(() =>
     (homework?.students ?? []).map(
       (student) =>
-        students.find((option) => option.id === student.id) ?? { ...student, email: null },
+        students.find((option) => option.id === student.id) ?? {
+          ...student,
+          email: null,
+        },
     ),
   );
   const [lesson, setLesson] = useState<LessonChoice>({
-    lessonAt: homework?.nextLessonAt ? new Date(homework.nextLessonAt).toISOString() : "",
+    lessonAt: homework?.nextLessonAt
+      ? new Date(homework.nextLessonAt).toISOString()
+      : "",
     custom: false,
     customLocal: "",
   });
   const lessonValid =
-    Boolean(prefill) || Boolean(lesson.custom ? lesson.customLocal : lesson.lessonAt);
+    Boolean(prefill) ||
+    Boolean(lesson.custom ? lesson.customLocal : lesson.lessonAt);
+  // Course topics come from the language of the first selected language student.
+  const courseLanguage =
+    selected.find((student) => student.siteType === "languages")
+      ?.targetLanguage ?? null;
+  const courseTopics = useApi<LanguageTopic[]>(
+    courseLanguage
+      ? `${router.api.languageTopics}?language=${courseLanguage}`
+      : null,
+    errorMessages.languageCourse.loadFailed,
+  );
+  const [topicId, setTopicId] = useState(
+    String(homework?.languageTopicId ?? prefill?.languageTopicId ?? ""),
+  );
+  const topics = courseTopics.data ?? [];
+  const selectedTopic = topics.some((topic) => String(topic.id) === topicId)
+    ? topicId
+    : "";
 
   return (
     <FieldsDialog
-      title={homework ? "Редагувати домашню роботу" : "Призначити домашню роботу"}
+      title={
+        homework ? "Редагувати домашню роботу" : "Призначити домашню роботу"
+      }
       submitLabel={homework ? "Зберегти" : "Призначити"}
       fields={[
         {
@@ -70,11 +107,39 @@ export function HomeworkForm({ students, homework, prefill, onSaved, onClose }: 
             value={selected}
             onChange={(_, value) => setSelected(value)}
             isOptionEqualToValue={(option, value) => option.id === value.id}
-            getOptionLabel={(student) => `${student.name} · ${student.grade} клас`}
+            getOptionLabel={studentLabel}
             renderInput={(params) => (
-              <TextField {...params} label="Кому призначити" required={selected.length === 0} />
+              <TextField
+                {...params}
+                label="Кому призначити"
+                required={selected.length === 0}
+              />
             )}
           />
+          {courseLanguage && (
+            <TextField
+              select
+              label="Тема курсу"
+              value={selectedTopic}
+              onChange={(event) => setTopicId(event.target.value)}
+              disabled={courseTopics.loading}
+              error={Boolean(courseTopics.error)}
+              helperText={
+                courseTopics.error ?? "ДЗ з'явиться в цій темі в курсі учня"
+              }
+              slotProps={{
+                select: { displayEmpty: true },
+                inputLabel: { shrink: true },
+              }}
+            >
+              <MenuItem value="">Без теми</MenuItem>
+              {topics.map((topic) => (
+                <MenuItem key={topic.id} value={String(topic.id)}>
+                  {`${topic.level} · ${topic.title}`}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           <LessonPicker
             students={selected}
             value={lesson}
@@ -83,7 +148,7 @@ export function HomeworkForm({ students, homework, prefill, onSaved, onClose }: 
           />
         </>
       }
-      extraValid={selected.length > 0 && lessonValid}
+      extraValid={selected.length > 0 && lessonValid && !courseTopics.loading}
       onClose={onClose}
       onSubmit={async (values) => {
         const lessonAt = lesson.custom
@@ -93,6 +158,8 @@ export function HomeworkForm({ students, homework, prefill, onSaved, onClose }: 
           ...values,
           nextLessonAt: lessonAt || null,
           studentIds: selected.map((student) => student.id),
+          languageTopicId:
+            courseLanguage && selectedTopic ? Number(selectedTopic) : null,
         };
         if (homework) {
           await api(router.api.assignment(homework.id), {

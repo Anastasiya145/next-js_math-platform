@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTeacherUser } from "@/lib/authz";
 import { errorMessages } from "@/lib/error-messages";
-import { deleteHomework, updateHomework } from "@/lib/db";
+import { deleteHomework, languageTopicExists, updateHomework } from "@/lib/db";
 import { isHttpUrl, isPositiveInteger } from "@/lib/validation";
 
 export async function PATCH(
@@ -22,6 +22,7 @@ export async function PATCH(
     resourceUrl?: unknown;
     nextLessonAt?: unknown;
     studentIds?: unknown;
+    languageTopicId?: unknown;
   } | null;
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   const instructions =
@@ -35,12 +36,15 @@ export async function PATCH(
   const studentIds = Array.isArray(body?.studentIds)
     ? body.studentIds.filter(isPositiveInteger)
     : [];
+  const rawTopicId = body?.languageTopicId ?? null;
+  const languageTopicId = isPositiveInteger(rawTopicId) ? rawTopicId : null;
 
   if (
     !title ||
     title.length > 160 ||
     instructions.length > 4000 ||
     studentIds.length === 0 ||
+    (rawTopicId !== null && languageTopicId === null) ||
     (resourceUrl && !isHttpUrl(resourceUrl)) ||
     (nextLessonAt && Number.isNaN(Date.parse(nextLessonAt)))
   ) {
@@ -55,6 +59,15 @@ export async function PATCH(
       { status: 404 },
     );
   }
+  if (
+    languageTopicId !== null &&
+    !(await languageTopicExists(languageTopicId))
+  ) {
+    return NextResponse.json(
+      { error: errorMessages.languageCourse.topicNotFound },
+      { status: 404 },
+    );
+  }
 
   const result = await updateHomework({
     homeworkId,
@@ -63,6 +76,7 @@ export async function PATCH(
     resourceUrl,
     nextLessonAt,
     studentIds,
+    languageTopicId,
   });
   if (result === "notFound") {
     return NextResponse.json(

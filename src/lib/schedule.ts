@@ -1,4 +1,6 @@
 import { isoToKyivLocal, kyivLocalToIso } from "@/lib/format";
+import type { LanguageLevel } from "@/lib/language-course";
+import type { LanguageCode } from "@/lib/languages";
 import type { NushSubject } from "@/lib/nush";
 
 // Weekdays are ISO numbers (1 = Monday) and all slot times are Kyiv local time.
@@ -10,18 +12,29 @@ export type LessonSlot = {
   endsOn: string | null;
 };
 
+export type StudentCourse = {
+  language: LanguageCode;
+  level: LanguageLevel | null;
+};
+
 export type ScheduleStudent = {
   id: number;
   name: string;
   grade: number;
+  // Set for language-learning students, whose lesson topics come from the language course.
+  course: StudentCourse | null;
   hourlyRate: number;
   slots: LessonSlot[];
 };
 
 export type LessonStatus = "planned" | "held" | "cancelled";
 
-// What was taught at a held lesson, copied from the NUSH topic list.
-export type LessonTopic = { id: number | null; title: string; subject: NushSubject };
+// What was taught at a held lesson, copied from the NUSH topic list or the language course.
+export type LessonTopic = {
+  id: number | null;
+  title: string;
+  subject: NushSubject | "language";
+};
 
 // A lesson that was marked, moved or added by hand. `scheduledAt` is its stable key.
 export type LessonRow = {
@@ -35,7 +48,11 @@ export type LessonRow = {
   topic: LessonTopic | null;
 };
 
-export type Lesson = LessonRow & { studentName: string; studentGrade: number };
+export type Lesson = LessonRow & {
+  studentName: string;
+  studentGrade: number;
+  studentCourse: StudentCourse | null;
+};
 
 export type ScheduleData = { students: ScheduleStudent[]; lessons: Lesson[] };
 
@@ -55,22 +72,35 @@ export const WEEKDAY_NAMES = [
   "Субота",
   "Неділя",
 ] as const;
-export const WEEKDAY_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"] as const;
+export const WEEKDAY_SHORT = [
+  "Пн",
+  "Вт",
+  "Ср",
+  "Чт",
+  "Пт",
+  "Сб",
+  "Нд",
+] as const;
 
 export const slotLabel = (slot: Pick<LessonSlot, "weekday" | "startTime">) =>
   `${WEEKDAY_SHORT[slot.weekday - 1]} ${slot.startTime}`;
 
-export const isTimeString = (value: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+export const isTimeString = (value: string) =>
+  /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 
 export const isDateString = (value: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
 };
 
 export const addDays = (date: string, days: number) => {
   const [year, month, day] = date.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
 };
 
 const isoWeekday = (date: string) => {
@@ -78,7 +108,8 @@ const isoWeekday = (date: string) => {
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay() || 7;
 };
 
-export const todayKyiv = () => isoToKyivLocal(new Date().toISOString()).slice(0, 10);
+export const todayKyiv = () =>
+  isoToKyivLocal(new Date().toISOString()).slice(0, 10);
 
 // Month "YYYY-MM" as the half-open date range [from, to).
 export const monthRange = (month: string) => {
@@ -91,7 +122,9 @@ export const monthRange = (month: string) => {
 
 export const shiftMonth = (month: string, delta: number) => {
   const [year, number] = month.split("-").map(Number);
-  return new Date(Date.UTC(year, number - 1 + delta, 1)).toISOString().slice(0, 7);
+  return new Date(Date.UTC(year, number - 1 + delta, 1))
+    .toISOString()
+    .slice(0, 7);
 };
 
 const slotCovers = (slot: LessonSlot, date: string) =>
@@ -102,10 +135,14 @@ const slotCovers = (slot: LessonSlot, date: string) =>
 // The slot that produces a planned lesson at this instant, if any.
 export const findSlotFor = (slots: LessonSlot[], scheduledAt: string) => {
   const [date, time] = isoToKyivLocal(scheduledAt).split("T");
-  return slots.find((slot) => slot.startTime === time && slotCovers(slot, date)) ?? null;
+  return (
+    slots.find((slot) => slot.startTime === time && slotCovers(slot, date)) ??
+    null
+  );
 };
 
-const keyOf = (studentId: number, scheduledAt: string) => `${studentId}|${scheduledAt}`;
+const keyOf = (studentId: number, scheduledAt: string) =>
+  `${studentId}|${scheduledAt}`;
 
 // Merges generated slot occurrences with stored lesson rows for the Kyiv dates [from, to).
 export function buildLessons(input: {
@@ -114,21 +151,28 @@ export function buildLessons(input: {
   from: string;
   to: string;
 }): Lesson[] {
-  const students = new Map(input.students.map((student) => [student.id, student]));
+  const students = new Map(
+    input.students.map((student) => [student.id, student]),
+  );
   const rangeStart = kyivLocalToIso(`${input.from}T00:00`);
   const rangeEnd = kyivLocalToIso(`${input.to}T00:00`);
-  const taken = new Set(input.rows.map((row) => keyOf(row.studentId, row.scheduledAt)));
+  const taken = new Set(
+    input.rows.map((row) => keyOf(row.studentId, row.scheduledAt)),
+  );
   const lessons: Lesson[] = [];
 
   for (const row of input.rows) {
     const student = students.get(row.studentId);
-    if (!student || row.startsAt < rangeStart || row.startsAt >= rangeEnd) continue;
+    if (!student || row.startsAt < rangeStart || row.startsAt >= rangeEnd)
+      continue;
     // A held lesson keeps the rate it was held at.
-    const hourlyRate = row.status === "held" ? row.hourlyRate : student.hourlyRate;
+    const hourlyRate =
+      row.status === "held" ? row.hourlyRate : student.hourlyRate;
     lessons.push({
       ...row,
       studentName: student.name,
       studentGrade: student.grade,
+      studentCourse: student.course,
       hourlyRate,
     });
   }
@@ -145,6 +189,7 @@ export function buildLessons(input: {
           studentId: student.id,
           studentName: student.name,
           studentGrade: student.grade,
+          studentCourse: student.course,
           scheduledAt,
           startsAt: scheduledAt,
           durationMinutes: slot.durationMinutes,
@@ -164,20 +209,27 @@ export function buildLessons(input: {
   );
 }
 
-export const lessonIncome = (lesson: Pick<Lesson, "hourlyRate" | "durationMinutes">) =>
-  Math.round((lesson.hourlyRate * lesson.durationMinutes) / 60);
+export const lessonIncome = (
+  lesson: Pick<Lesson, "hourlyRate" | "durationMinutes">,
+) => Math.round((lesson.hourlyRate * lesson.durationMinutes) / 60);
 
-export const lessonEnd = (lesson: Pick<Lesson, "startsAt" | "durationMinutes">) =>
-  new Date(lesson.startsAt).getTime() + lesson.durationMinutes * 60_000;
+export const lessonEnd = (
+  lesson: Pick<Lesson, "startsAt" | "durationMinutes">,
+) => new Date(lesson.startsAt).getTime() + lesson.durationMinutes * 60_000;
 
-export const isMoved = (lesson: Pick<Lesson, "startsAt" | "scheduledAt" | "isExtra">) =>
-  !lesson.isExtra && lesson.startsAt !== lesson.scheduledAt;
+export const isMoved = (
+  lesson: Pick<Lesson, "startsAt" | "scheduledAt" | "isExtra">,
+) => !lesson.isExtra && lesson.startsAt !== lesson.scheduledAt;
 
 // "unmarked" is a planned lesson whose time has already passed.
 export type LessonPhase = "held" | "cancelled" | "upcoming" | "unmarked";
 
 export const lessonPhase = (lesson: Lesson, now: number): LessonPhase =>
-  lesson.status !== "planned" ? lesson.status : lessonEnd(lesson) <= now ? "unmarked" : "upcoming";
+  lesson.status !== "planned"
+    ? lesson.status
+    : lessonEnd(lesson) <= now
+      ? "unmarked"
+      : "upcoming";
 
 export type BudgetFigures = {
   held: number;
@@ -201,7 +253,11 @@ const emptyFigures = (): BudgetFigures => ({
   upcomingIncome: 0,
 });
 
-const addLesson = (figures: BudgetFigures, lesson: Lesson, phase: LessonPhase) => {
+const addLesson = (
+  figures: BudgetFigures,
+  lesson: Lesson,
+  phase: LessonPhase,
+) => {
   if (phase === "held") {
     figures.held += 1;
     figures.heldMinutes += lesson.durationMinutes;
@@ -233,6 +289,8 @@ export function summarizeBudget(lessons: Lesson[], now: number) {
   }
   return {
     totals,
-    lines: [...lines.values()].sort((first, second) => first.name.localeCompare(second.name)),
+    lines: [...lines.values()].sort((first, second) =>
+      first.name.localeCompare(second.name),
+    ),
   };
 }

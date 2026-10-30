@@ -21,6 +21,7 @@ import { router } from "../router";
 import { HomeworkAssignmentCard } from "./HomeworkAssignmentCard";
 import { ReportAction } from "./ReportAction";
 import { StudentTextbookList } from "./StudentTextbookList";
+import { StudentCourse } from "./StudentCourse";
 import { TelegramConnect } from "./TelegramConnect";
 import type { StudentDashboardData, StudentHomeworkItem } from "./types";
 import { useAppLanguage } from "@/lib/LanguageProvider";
@@ -98,11 +99,23 @@ export function StudentCabinet({ studentId }: Props) {
       subtitle={
         data
           ? siteType === "languages" && baseLanguage && targetLanguage
-            ? t("languagePair", {
-                base: t(baseLanguage === "fr" ? "french" : "russian"),
-                target: t(targetLanguage === "fr" ? "french" : "russian"),
-              })
-            : `${t("gradeLabel", { grade: data.student.grade })} · ${t(
+            ? [
+                t("languagePair", {
+                  base: t(baseLanguage === "fr" ? "french" : "russian"),
+                  target: t(targetLanguage === "fr" ? "french" : "russian"),
+                }),
+                data.student.languageLevel &&
+                  t("levelLabel", { level: data.student.languageLevel }),
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            : `${
+                data.course
+                  ? t("levelLabel", {
+                      level: data.student.languageLevel ?? "—",
+                    })
+                  : t("gradeLabel", { grade: data.student.grade })
+              } · ${t(
                 teacherView ? "teacherCabinetSuffix" : "studentCabinetSuffix",
               )}`
           : undefined
@@ -169,58 +182,65 @@ export function StudentCabinet({ studentId }: Props) {
             </Grid>
           </Grid>
           {!teacherView && <TelegramConnect />}
-          <PageSection
-            title={t("textbooks")}
-            subtitle={t("forGrade", { grade: data.student.grade })}
-            icon={<MenuBookIcon />}
-            tone="success"
-            action={
-              teacherView && (
-                <AddAction
-                  label="Підручник"
-                  color="success"
-                  title={`Новий підручник для ${data.student.grade} класу`}
-                  fields={[
-                    {
-                      name: "title",
-                      label: "Назва підручника",
-                      maxLength: 180,
-                    },
-                    { name: "url", label: "Посилання", type: "url" },
-                    {
-                      name: "subject",
-                      label: "Предмет",
-                      maxLength: 80,
-                      defaultValue:
-                        data.student.grade <= 6 ? "Математика" : "Алгебра",
-                    },
-                    {
-                      name: "author",
-                      label: "Автор",
-                      optional: true,
-                      maxLength: 160,
-                    },
-                  ]}
-                  onSubmit={async (values) => {
-                    // Grade-wide on purpose: it joins the class library and every student of the grade sees it.
-                    await api(router.api.textbooks, {
-                      body: {
-                        ...values,
-                        grade: data.student.grade,
-                        resourceType: "textbook",
+          {data.course ? (
+            <StudentCourse
+              topics={data.course}
+              level={data.student.languageLevel}
+            />
+          ) : (
+            <PageSection
+              title={t("textbooks")}
+              subtitle={t("forGrade", { grade: data.student.grade })}
+              icon={<MenuBookIcon />}
+              tone="success"
+              action={
+                teacherView && (
+                  <AddAction
+                    label="Підручник"
+                    color="success"
+                    title={`Новий підручник для ${data.student.grade} класу`}
+                    fields={[
+                      {
+                        name: "title",
+                        label: "Назва підручника",
+                        maxLength: 180,
                       },
-                      fallback: errorMessages.textbooks.addFailed,
-                    });
-                    await reload();
-                  }}
-                />
-              )
-            }
-            empty={data.textbooks.length === 0}
-            emptyText={t("textbooksEmpty", { grade: data.student.grade })}
-          >
-            <StudentTextbookList textbooks={data.textbooks} />
-          </PageSection>
+                      { name: "url", label: "Посилання", type: "url" },
+                      {
+                        name: "subject",
+                        label: "Предмет",
+                        maxLength: 80,
+                        defaultValue:
+                          data.student.grade <= 6 ? "Математика" : "Алгебра",
+                      },
+                      {
+                        name: "author",
+                        label: "Автор",
+                        optional: true,
+                        maxLength: 160,
+                      },
+                    ]}
+                    onSubmit={async (values) => {
+                      // Grade-wide on purpose: it joins the class library and every student of the grade sees it.
+                      await api(router.api.textbooks, {
+                        body: {
+                          ...values,
+                          grade: data.student.grade,
+                          resourceType: "textbook",
+                        },
+                        fallback: errorMessages.textbooks.addFailed,
+                      });
+                      await reload();
+                    }}
+                  />
+                )
+              }
+              empty={data.textbooks.length === 0}
+              emptyText={t("textbooksEmpty", { grade: data.student.grade })}
+            >
+              <StudentTextbookList textbooks={data.textbooks} />
+            </PageSection>
+          )}
           {homeworkSection(
             t("currentHomework"),
             active,

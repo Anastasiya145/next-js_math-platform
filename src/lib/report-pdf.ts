@@ -54,7 +54,8 @@ const formatScore = (value: number) =>
   `${new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 1 }).format(value)}/${MAX_SCORE}`;
 
 const tableLayout: CustomTableLayout = {
-  hLineWidth: (index, node) => (index === 0 || index === node.table.body.length ? 0 : 0.5),
+  hLineWidth: (index, node) =>
+    index === 0 || index === node.table.body.length ? 0 : 0.5,
   vLineWidth: () => 0,
   hLineColor: () => COLORS.line,
   paddingTop: () => 4,
@@ -68,7 +69,9 @@ let fontsReady = false;
 function setupPdfmake() {
   if (fontsReady) return;
   const storage = (
-    pdfmake as unknown as { virtualfs: { writeFileSync(name: string, data: Buffer): void } }
+    pdfmake as unknown as {
+      virtualfs: { writeFileSync(name: string, data: Buffer): void };
+    }
   ).virtualfs;
   for (const [name, base64] of Object.entries(vfs)) {
     storage.writeFileSync(name, Buffer.from(base64, "base64"));
@@ -96,9 +99,17 @@ const heading = (text: string): Content => ({
   headlineLevel: 1,
 });
 
-const note = (text: string): Content => ({ text, color: COLORS.muted, italics: true });
+const note = (text: string): Content => ({
+  text,
+  color: COLORS.muted,
+  italics: true,
+});
 
-const headerCell = (text: string): TableCell => ({ text, bold: true, color: COLORS.muted });
+const headerCell = (text: string): TableCell => ({
+  text,
+  bold: true,
+  color: COLORS.muted,
+});
 
 function statCard(value: string, label: string, color: string): TableCell {
   return {
@@ -133,7 +144,9 @@ function summarySection(report: StudentReport): Content[] {
             statCard(String(summary.cancelled), "Не відбулося", COLORS.error),
             statCard(String(summary.moved), "Перенесено", COLORS.info),
             statCard(
-              report.averageScore === null ? "—" : formatScore(report.averageScore),
+              report.averageScore === null
+                ? "—"
+                : formatScore(report.averageScore),
               `Середній бал · робіт: ${report.grades.length}`,
               COLORS.primary,
             ),
@@ -170,13 +183,16 @@ function lessonRow(lesson: ReportLesson): TableCell[] {
       color: COLORS.muted,
     });
   }
-  if (lesson.isExtra) statusLines.push({ text: "додатковий", fontSize: 8, color: COLORS.muted });
+  if (lesson.isExtra)
+    statusLines.push({ text: "додатковий", fontSize: 8, color: COLORS.muted });
 
   return [
     formatDay(lesson.startsAt),
     lessonTimeRange(lesson.startsAt, lesson.durationMinutes),
     { stack: statusLines },
-    lesson.topic ? formatTopic(lesson.topic) : { text: "—", color: COLORS.muted },
+    lesson.topic
+      ? formatTopic(lesson.topic)
+      : { text: "—", color: COLORS.muted },
   ];
 }
 
@@ -191,7 +207,10 @@ function lessonsSection(report: StudentReport): Content[] {
         headerRows: 1,
         dontBreakRows: true,
         widths: [62, 62, 90, "*"],
-        body: [["Дата", "Час", "Статус", "Тема"].map(headerCell), ...report.lessons.map(lessonRow)],
+        body: [
+          ["Дата", "Час", "Статус", "Тема"].map(headerCell),
+          ...report.lessons.map(lessonRow),
+        ],
       },
       layout: tableLayout,
     },
@@ -200,28 +219,46 @@ function lessonsSection(report: StudentReport): Content[] {
 
 function topicsSection(report: StudentReport): Content[] {
   if (report.topics.length === 0) {
-    return [heading("Вивчені теми"), note("Теми проведених уроків не вказано.")];
+    return [
+      heading("Вивчені теми"),
+      note("Теми проведених уроків не вказано."),
+    ];
   }
-  // Grades from 7 are split into algebra and geometry, earlier grades have one list.
-  const groups = new Map<NushSubject, StudentReport["topics"]>();
+  // Grades from 7 are split into algebra and geometry; earlier grades and language courses have one list.
+  const groups = new Map<NushSubject | "language", StudentReport["topics"]>();
   for (const entry of report.topics) {
-    groups.set(entry.topic.subject, [...(groups.get(entry.topic.subject) ?? []), entry]);
+    groups.set(entry.topic.subject, [
+      ...(groups.get(entry.topic.subject) ?? []),
+      entry,
+    ]);
   }
-  const subjects = [...NUSH_SPLIT_SUBJECTS, "math" as const].filter((subject) =>
-    groups.has(subject),
-  );
+  const subjects = [
+    ...NUSH_SPLIT_SUBJECTS,
+    "math" as const,
+    "language" as const,
+  ].filter((subject) => groups.has(subject));
 
   return [
     heading("Вивчені теми"),
     ...subjects.flatMap((subject): Content[] => [
-      ...(subject === "math"
+      ...(subject === "math" || subject === "language"
         ? []
-        : [{ text: NUSH_SUBJECT_LABELS[subject], bold: true, margin: [0, 4, 0, 2] } as Content]),
+        : [
+            {
+              text: NUSH_SUBJECT_LABELS[subject],
+              bold: true,
+              margin: [0, 4, 0, 2],
+            } as Content,
+          ]),
       {
         ul: (groups.get(subject) ?? []).map(({ topic, dates }) => ({
           text: [
             { text: topic.title },
-            { text: `  ${dates.map(formatShortDay).join(", ")}`, color: COLORS.muted, fontSize: 8 },
+            {
+              text: `  ${dates.map(formatShortDay).join(", ")}`,
+              color: COLORS.muted,
+              fontSize: 8,
+            },
           ],
           margin: [0, 1, 0, 1],
         })),
@@ -237,9 +274,14 @@ function gradesChart(grades: StudentReport["grades"]): Content {
   const plotWidth = CONTENT_WIDTH - plot.left - plot.right;
   const plotHeight = height - plot.top - plot.bottom;
   const x = (index: number) =>
-    plot.left + (grades.length === 1 ? plotWidth / 2 : (plotWidth * index) / (grades.length - 1));
+    plot.left +
+    (grades.length === 1
+      ? plotWidth / 2
+      : (plotWidth * index) / (grades.length - 1));
   const y = (score: number) => plot.top + plotHeight * (1 - score / MAX_SCORE);
-  const labelEvery = Math.ceil(grades.length / Math.max(1, Math.floor(plotWidth / 34)));
+  const labelEvery = Math.ceil(
+    grades.length / Math.max(1, Math.floor(plotWidth / 34)),
+  );
   const showValues = grades.length <= 20;
   const font = `font-family="Roboto" fill="${COLORS.muted}"`;
 
@@ -284,11 +326,17 @@ function gradesChart(grades: StudentReport["grades"]): Content {
 
 function gradesSection(report: StudentReport): Content[] {
   if (report.grades.length === 0) {
-    return [heading("Динаміка оцінок"), note("Оцінених домашніх робіт у цьому періоді немає.")];
+    return [
+      heading("Динаміка оцінок"),
+      note("Оцінених домашніх робіт у цьому періоді немає."),
+    ];
   }
   return [
     // The chart is one block, so the heading stays with it instead of being left on the previous page.
-    { stack: [heading("Динаміка оцінок"), gradesChart(report.grades)], unbreakable: true },
+    {
+      stack: [heading("Динаміка оцінок"), gradesChart(report.grades)],
+      unbreakable: true,
+    },
     {
       table: {
         headerRows: 1,
@@ -321,11 +369,22 @@ export async function renderReportPdf(report: StudentReport): Promise<Buffer> {
     pageMargins: [PAGE_MARGIN, 48, PAGE_MARGIN, 48],
     // A heading left alone at the bottom of a page moves to the next one with its content.
     pageBreakBefore: (node, queries) =>
-      node.headlineLevel === 1 && queries.getFollowingNodesOnPage().length === 0,
+      node.headlineLevel === 1 &&
+      queries.getFollowingNodesOnPage().length === 0,
     defaultStyle: { font: "Roboto", fontSize: 10, color: COLORS.text },
     content: [
-      { text: "Звіт про навчання", fontSize: 20, bold: true, color: COLORS.primary },
-      { text: report.student.name, fontSize: 14, bold: true, margin: [0, 4, 0, 0] },
+      {
+        text: "Звіт про навчання",
+        fontSize: 20,
+        bold: true,
+        color: COLORS.primary,
+      },
+      {
+        text: report.student.name,
+        fontSize: 14,
+        bold: true,
+        margin: [0, 4, 0, 0],
+      },
       {
         text: `${report.student.grade} клас · ${period}`,
         color: COLORS.muted,

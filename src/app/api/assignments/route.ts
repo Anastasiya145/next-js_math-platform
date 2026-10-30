@@ -3,6 +3,7 @@ import { errorMessages } from "@/lib/error-messages";
 import { getStudentUser, getTeacherUser } from "@/lib/authz";
 import {
   createHomework,
+  languageTopicExists,
   listHomeworkForStudent,
   listHomeworkForTeacher,
 } from "@/lib/db";
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     dueAt?: string | null;
     nextLessonAt?: string | null;
     studentIds?: unknown;
+    languageTopicId?: unknown;
   } | null;
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   const instructions =
@@ -57,12 +59,15 @@ export async function POST(request: Request) {
   const studentIds = Array.isArray(body?.studentIds)
     ? body.studentIds.filter(isPositiveInteger)
     : [];
+  const rawTopicId = body?.languageTopicId ?? null;
+  const languageTopicId = isPositiveInteger(rawTopicId) ? rawTopicId : null;
 
   if (
     !title ||
     title.length > 160 ||
     instructions.length > 4000 ||
     studentIds.length === 0 ||
+    (rawTopicId !== null && languageTopicId === null) ||
     (resourceUrl && !isHttpUrl(resourceUrl)) ||
     (dueAt && Number.isNaN(Date.parse(dueAt))) ||
     (nextLessonAt && Number.isNaN(Date.parse(nextLessonAt)))
@@ -70,6 +75,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: errorMessages.homework.invalidAssignment },
       { status: 400 },
+    );
+  }
+  if (
+    languageTopicId !== null &&
+    !(await languageTopicExists(languageTopicId))
+  ) {
+    return NextResponse.json(
+      { error: errorMessages.languageCourse.topicNotFound },
+      { status: 404 },
     );
   }
 
@@ -82,6 +96,7 @@ export async function POST(request: Request) {
       nextLessonAt,
       createdBy: teacher.email ?? "teacher",
       studentIds,
+      languageTopicId,
     });
     after(() =>
       notifyHomeworkAssigned(id, studentIds).catch((error) =>

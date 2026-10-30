@@ -15,6 +15,7 @@ import { router } from "@/app/router";
 import { FormDialog } from "@/components/FormDialog";
 import type { Student } from "./types";
 import { isLanguageCode } from "@/lib/languages";
+import { LANGUAGE_LEVELS, isLanguageLevel } from "@/lib/language-course";
 import { PasswordField } from "@/components/PasswordField";
 import { EmailField } from "@/components/EmailField";
 
@@ -38,6 +39,7 @@ export function StudentDialog({
     siteType: student?.siteType ?? "math",
     baseLanguage: student?.baseLanguage ?? "fr",
     targetLanguage: student?.targetLanguage ?? "ru",
+    languageLevel: student?.languageLevel ?? "A1",
   });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -90,6 +92,8 @@ export function StudentDialog({
                 values.siteType === "languages" ? values.baseLanguage : null,
               targetLanguage:
                 values.siteType === "languages" ? values.targetLanguage : null,
+              languageLevel:
+                values.siteType === "languages" ? values.languageLevel : null,
             },
             fallback: student
               ? errorMessages.students.saveFailed
@@ -105,13 +109,16 @@ export function StudentDialog({
         slotProps={{ htmlInput: { maxLength: 120 } }}
         {...field("name")}
       />
-      <TextField select label="Клас" {...field("grade")}>
-        {GRADES.map((grade) => (
-          <MenuItem key={grade} value={String(grade)}>
-            {grade} клас
-          </MenuItem>
-        ))}
-      </TextField>
+      {/* Language students follow a level-based course, so their school grade is not asked. */}
+      {values.siteType === "math" && (
+        <TextField select label="Клас" {...field("grade")}>
+          {GRADES.map((grade) => (
+            <MenuItem key={grade} value={String(grade)}>
+              {grade} клас
+            </MenuItem>
+          ))}
+        </TextField>
+      )}
       <TextField
         select
         label="Сайт"
@@ -155,6 +162,22 @@ export function StudentDialog({
           >
             <MenuItem value="fr">Французька</MenuItem>
             <MenuItem value="ru">Російська</MenuItem>
+          </TextField>
+          <TextField
+            select
+            label="Рівень"
+            value={values.languageLevel}
+            onChange={(event) => {
+              if (isLanguageLevel(event.target.value)) {
+                setValues({ ...values, languageLevel: event.target.value });
+              }
+            }}
+          >
+            {LANGUAGE_LEVELS.map((level) => (
+              <MenuItem key={level} value={level}>
+                {level}
+              </MenuItem>
+            ))}
           </TextField>
         </>
       )}

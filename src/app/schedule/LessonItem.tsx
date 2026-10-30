@@ -49,7 +49,14 @@ type Props = {
 };
 
 // One lesson of the month with the actions to mark, move, reset or delete it.
-export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Props) {
+export function LessonItem({
+  lesson,
+  now,
+  busy,
+  onMark,
+  onReset,
+  onReload,
+}: Props) {
   const [moving, setMoving] = useState(false);
   // Marking a lesson as held asks what was taught, so it shares the dialog with editing the topic.
   const [topicDialog, setTopicDialog] = useState<"mark" | "edit" | null>(null);
@@ -78,7 +85,10 @@ export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Pro
     await onReload();
   };
 
-  const track = async (action: LessonStatus | "reset", task: () => Promise<unknown>) => {
+  const track = async (
+    action: LessonStatus | "reset",
+    task: () => Promise<unknown>,
+  ) => {
     setPending(action);
     try {
       await task();
@@ -101,15 +111,29 @@ export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Pro
           <span>{lesson.studentName}</span>
           <Chip component="span" size="small" color={tone} label={label} />
           {lesson.isExtra && (
-            <Chip component="span" size="small" variant="outlined" label="Додатковий" />
+            <Chip
+              component="span"
+              size="small"
+              variant="outlined"
+              label="Додатковий"
+            />
           )}
-          {moved && <Chip component="span" size="small" variant="outlined" label="Перенесено" />}
+          {moved && (
+            <Chip
+              component="span"
+              size="small"
+              variant="outlined"
+              label="Перенесено"
+            />
+          )}
         </Stack>
       }
       secondary={
         <>
           {`${weekday}, ${date} · ${lessonTimeRange(lesson.startsAt, lesson.durationMinutes)}${
-            phase === "cancelled" ? "" : ` · ${formatMoney(lessonIncome(lesson))}`
+            phase === "cancelled"
+              ? ""
+              : ` · ${formatMoney(lessonIncome(lesson))}`
           }`}
           {lesson.topic && (
             <Box component="span" sx={{ display: "block" }}>
@@ -146,7 +170,9 @@ export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Pro
               color="error"
               loading={pending === "cancelled"}
               disabled={busy}
-              onClick={() => void track("cancelled", () => onMark(lesson, "cancelled"))}
+              onClick={() =>
+                void track("cancelled", () => onMark(lesson, "cancelled"))
+              }
             >
               <CancelIcon />
             </IconAction>
@@ -163,7 +189,9 @@ export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Pro
           )}
           {(lesson.status !== "planned" || moved) && (
             <IconAction
-              label={lesson.isExtra ? "Скасувати відмітку" : "Скинути до розкладу"}
+              label={
+                lesson.isExtra ? "Скасувати відмітку" : "Скинути до розкладу"
+              }
               color="inherit"
               loading={pending === "reset"}
               disabled={busy}
@@ -179,7 +207,10 @@ export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Pro
               onConfirm={() =>
                 api(
                   `${router.api.schedule}?studentId=${lesson.studentId}&scheduledAt=${encodeURIComponent(lesson.scheduledAt)}`,
-                  { method: "DELETE", fallback: errorMessages.schedule.lessonDeleteFailed },
+                  {
+                    method: "DELETE",
+                    fallback: errorMessages.schedule.lessonDeleteFailed,
+                  },
                 ).then(onReload)
               }
             />
@@ -205,6 +236,7 @@ export function LessonItem({ lesson, now, busy, onMark, onReset, onReload }: Pro
               title={`${topicDialog === "mark" ? "Урок відбувся" : "Тема уроку"}: ${lesson.studentName}`}
               submitLabel={topicDialog === "mark" ? "Відбувся" : "Зберегти"}
               grade={lesson.studentGrade}
+              course={lesson.studentCourse}
               current={lesson.topic}
               onSubmit={saveHeld}
               onClose={() => setTopicDialog(null)}

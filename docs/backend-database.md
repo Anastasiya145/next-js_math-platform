@@ -15,31 +15,32 @@ For an interactive API reference, sign in as a teacher and open `/api-docs`. Its
 
 ## API index
 
-| Route                                       | Methods                  | Access / purpose                                                           |
-| ------------------------------------------- | ------------------------ | -------------------------------------------------------------------------- |
-| `/api/students`                             | GET, POST, PATCH, DELETE | Teacher: manage student profiles and accounts. PATCH/DELETE use `?id=...`. |
-| `/api/assignments`                          | GET, POST                | Teacher: list/create assignments. Student: GET their own assignments.      |
-| `/api/assignments/[homeworkId]`             | PATCH, DELETE            | Teacher: update/delete an assignment.                                      |
-| `/api/assignments/[homeworkId]/grade`       | PATCH                    | Teacher: grade a submission.                                               |
-| `/api/assignments/[homeworkId]/no-homework` | POST                     | Student: mark an assignment as not done.                                   |
-| `/api/assignments/[homeworkId]/submission`  | GET, POST                | Teacher: download a submitted file. Student: upload submission files.      |
-| `/api/schedule`                             | GET, POST, PATCH, DELETE | Teacher: query and manage lessons.                                         |
-| `/api/students/[studentId]/schedule`        | PUT                      | Teacher: replace a student's recurring lesson slots and hourly rate.       |
-| `/api/payments`                             | GET, POST, PATCH, DELETE | Teacher: query and manage student payments.                                |
-| `/api/student/dashboard`                    | GET                      | Student: own dashboard. Teacher: pass `?studentId=...` to view a student.  |
-| `/api/student/change-password`              | POST                     | Student: change own password.                                              |
-| `/api/student/language`                     | PATCH                    | Student: update own language preferences.                                  |
-| `/api/student/telegram`                     | GET, POST, DELETE        | Student: Telegram status, create a one-time bot link, unlink.              |
-| `/api/telegram/webhook`                     | POST                     | Telegram Bot API only; requires the webhook secret header.                 |
-| `/api/materials`                            | GET, POST                | Teacher: manage class materials. POST uses an `action` field.              |
-| `/api/nush`                                 | GET, POST                | Teacher: manage NUSH topics and materials. POST uses an `action` field.    |
-| `/api/textbooks`                            | GET, POST                | Teacher: list/create textbooks.                                            |
-| `/api/textbooks/[textbookId]`               | PATCH, DELETE            | Teacher: update/delete a textbook.                                         |
-| `/api/students/[studentId]/report`          | GET                      | Teacher: download a student report.                                        |
-| `/api/students/[studentId]/drive-folder`    | PUT                      | Teacher: set a student's Drive folder.                                     |
-| `/api/teacher/drive-status`                 | GET                      | Teacher: inspect Drive connection status.                                  |
-| `/api/teacher/drive-picker`                 | GET                      | Teacher: get Drive picker configuration.                                   |
-| `/api/auth/[...nextauth]`                   | NextAuth handlers        | Sign-in/session endpoints; see `src/auth.ts` for configuration.            |
+| Route                                       | Methods                  | Access / purpose                                                                                   |
+| ------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------- |
+| `/api/students`                             | GET, POST, PATCH, DELETE | Teacher: manage student profiles and accounts. PATCH/DELETE use `?id=...`.                         |
+| `/api/assignments`                          | GET, POST                | Teacher: list/create assignments. Student: GET their own assignments.                              |
+| `/api/assignments/[homeworkId]`             | PATCH, DELETE            | Teacher: update/delete an assignment.                                                              |
+| `/api/assignments/[homeworkId]/grade`       | PATCH                    | Teacher: grade a submission.                                                                       |
+| `/api/assignments/[homeworkId]/no-homework` | POST                     | Student: mark an assignment as not done.                                                           |
+| `/api/assignments/[homeworkId]/submission`  | GET, POST                | Teacher: download a submitted file. Student: upload submission files.                              |
+| `/api/schedule`                             | GET, POST, PATCH, DELETE | Teacher: query and manage lessons.                                                                 |
+| `/api/students/[studentId]/schedule`        | PUT                      | Teacher: replace a student's recurring lesson slots and hourly rate.                               |
+| `/api/payments`                             | GET, POST, PATCH, DELETE | Teacher: query and manage student payments.                                                        |
+| `/api/student/dashboard`                    | GET                      | Student: own dashboard. Teacher: pass `?studentId=...` to view a student.                          |
+| `/api/student/change-password`              | POST                     | Student: change own password.                                                                      |
+| `/api/student/language`                     | PATCH                    | Student: update own language preferences.                                                          |
+| `/api/student/telegram`                     | GET, POST, DELETE        | Student: Telegram status, create a one-time bot link, unlink.                                      |
+| `/api/telegram/webhook`                     | POST                     | Telegram Bot API only; requires the webhook secret header.                                         |
+| `/api/materials`                            | GET, POST                | Teacher: manage class materials. POST uses an `action` field.                                      |
+| `/api/nush`                                 | GET, POST                | Teacher: manage NUSH topics and materials. POST uses an `action` field.                            |
+| `/api/language-topics`                      | GET, POST                | Teacher: language course topics (`?language=ru`) and their materials. POST uses an `action` field. |
+| `/api/textbooks`                            | GET, POST                | Teacher: list/create textbooks.                                                                    |
+| `/api/textbooks/[textbookId]`               | PATCH, DELETE            | Teacher: update/delete a textbook.                                                                 |
+| `/api/students/[studentId]/report`          | GET                      | Teacher: download a student report.                                                                |
+| `/api/students/[studentId]/drive-folder`    | PUT                      | Teacher: set a student's Drive folder.                                                             |
+| `/api/teacher/drive-status`                 | GET                      | Teacher: inspect Drive connection status.                                                          |
+| `/api/teacher/drive-picker`                 | GET                      | Teacher: get Drive picker configuration.                                                           |
+| `/api/auth/[...nextauth]`                   | NextAuth handlers        | Sign-in/session endpoints; see `src/auth.ts` for configuration.                                    |
 
 Route validation is authoritative. See the matching `route.ts` before depending on an optional field, accepted value, limit, or exact response shape.
 
@@ -195,7 +196,7 @@ Payment and schedule range endpoints accept ISO calendar dates and enforce a con
 The schema is maintained by ordered SQL migrations. Key tables and relationships:
 
 | Tables                                                                                | Purpose and key relationships                                                                                                                                                                   |
-| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ------------------- | --------------------------- |
 | `students`, `student_accounts`, `teacher_accounts`                                    | Student profiles and teacher/student login records. `student_accounts.student_id` references `students.id`. Password salt/hash columns in both account tables are secret.                       |
 | `student_drive_folders`, `teacher_google_tokens`                                      | Drive folder mapping and OAuth token records. Treat all token fields as secret.                                                                                                                 |
 | `homeworks`, `homework_students`, `homework_submissions`, `homework_submission_files` | Assignments, student assignments, submission/grade state, and submitted Drive file metadata. Assignment/student relationships cascade on deletion.                                              |
@@ -204,8 +205,7 @@ The schema is maintained by ordered SQL migrations. Key tables and relationships
 | `material_classes`, `material_topics`, `material_files`                               | Teacher-managed class materials; child topics/files cascade on parent deletion.                                                                                                                 |
 | `student_lesson_slots`, `lessons`                                                     | Recurring weekly slots and dated lesson instances. Lesson status is `planned`, `held`, or `cancelled`. Times are stored as timestamps; recurring slots use Kyiv-local weekday/time conventions. |
 | `student_payments`                                                                    | Payments received for a student; amounts are integer UAH.                                                                                                                                       |
-| `student_telegram`                                                                    | Linked Telegram chat per student and a hashed one-time link token (15 minutes). Used for new-homework and grade notifications.                                                                  |
-| `schema_migrations`                                                                   | Applied migration versions.                                                                                                                                                                     |
+| `student_telegram`                                                                    | Linked Telegram chat per student and a hashed one-time link token (15 minutes). Used for new-homework and grade notifications.                                                                  |     | `language_topics`, `language_topic_materials` | Language course by language (`fr`/`ru`), level (`A1`-`C1`) and section. `students.language_level`, `homeworks.language_topic_id` and `lessons.language_topic_id` link to it (`ON DELETE SET NULL`). |     | `schema_migrations` | Applied migration versions. |
 
 For complete columns, constraints, indexes, and migration history, read [`db/migrations/`](../db/migrations/). Notable constraints include grades 1-11, unique case-insensitive student email, unique `(student_id, scheduled_at)` lesson instances, and score range 0-12.
 

@@ -182,6 +182,15 @@ export function HomeworkAssignmentCard({
       />
       <CardContent sx={{ pt: 0, minWidth: 0 }}>
         <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
+          {homework.topic && (
+            <Chip
+              size="small"
+              variant="outlined"
+              color="info"
+              label={t("homeworkTopic", { title: homework.topic.title })}
+              sx={{ maxWidth: "100%" }}
+            />
+          )}
           {homework.instructions && (
             <Typography sx={{ maxWidth: "100%", overflowWrap: "anywhere" }}>
               {homework.instructions}

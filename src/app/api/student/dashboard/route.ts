@@ -5,6 +5,7 @@ import {
   getStudentById,
   getStudentProgress,
   listHomeworkForStudent,
+  listStudentCourse,
   listTextbooksForGrade,
 } from "@/lib/db";
 
@@ -18,14 +19,20 @@ export async function GET(request: Request) {
   if (studentIdParam) {
     const teacher = await getTeacherUser();
     if (!teacher) {
-      return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+      return NextResponse.json(
+        { error: errorMessages.common.accessDenied },
+        { status: 403 },
+      );
     }
     student = await getStudentById(Number(studentIdParam));
   } else {
     // Otherwise, student is viewing their own dashboard
     const user = await getStudentUser();
     if (!user) {
-      return NextResponse.json({ error: errorMessages.common.accessDenied }, { status: 403 });
+      return NextResponse.json(
+        { error: errorMessages.common.accessDenied },
+        { status: 403 },
+      );
     }
     student = await getStudentById(user.studentId);
   }
@@ -38,24 +45,36 @@ export async function GET(request: Request) {
   }
 
   const studentId = student.id;
-  const [textbooks, homeworks, progress] = await Promise.all([
-    listTextbooksForGrade(student.grade),
+  const isLanguageStudent = student.siteType === "languages";
+  // Language students follow a level-based course instead of grade textbooks.
+  const [textbooks, course, homeworks, progress] = await Promise.all([
+    isLanguageStudent ? [] : listTextbooksForGrade(student.grade),
+    isLanguageStudent ? listStudentCourse(studentId) : null,
     listHomeworkForStudent(studentId),
     getStudentProgress(studentId),
   ]);
-  const gradedPoints = progress.filter((point) => point.gradedAt !== null && point.score !== null);
+  const gradedPoints = progress.filter(
+    (point) => point.gradedAt !== null && point.score !== null,
+  );
   const averageScore = gradedPoints.length
     ? Number(
         (
-          gradedPoints.reduce((total, point) => total + (point.score ?? 0), 0) / gradedPoints.length
+          gradedPoints.reduce((total, point) => total + (point.score ?? 0), 0) /
+          gradedPoints.length
         ).toFixed(1),
       )
     : null;
 
   return NextResponse.json({
     data: {
-      student: { id: student.id, name: student.name, grade: student.grade },
+      student: {
+        id: student.id,
+        name: student.name,
+        grade: student.grade,
+        languageLevel: student.languageLevel,
+      },
       textbooks,
+      course,
       homeworks,
       progress,
       averageScore,

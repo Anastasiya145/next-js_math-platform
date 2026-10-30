@@ -12,9 +12,19 @@ import type { HomeworkStudentOption } from "./types";
 
 type Notice = { severity: "success" | "warning" | "error"; text: string };
 
-// Icon button that opens the homework form prefilled with a material's name and link.
-export function AssignHomeworkAction({ title, url }: { title: string; url: string }) {
-  const [students, setStudents] = useState<HomeworkStudentOption[] | null>(null);
+// Icon button that opens the homework form prefilled with a material's name and link (and its course topic).
+export function AssignHomeworkAction({
+  title,
+  url,
+  languageTopicId,
+}: {
+  title: string;
+  url: string;
+  languageTopicId?: number;
+}) {
+  const [students, setStudents] = useState<HomeworkStudentOption[] | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
 
@@ -26,7 +36,10 @@ export function AssignHomeworkAction({ title, url }: { title: string; url: strin
         fallback: errorMessages.students.loadFailed,
       });
       if (list.length === 0) {
-        setNotice({ severity: "warning", text: errorMessages.homework.noStudents });
+        setNotice({
+          severity: "warning",
+          text: errorMessages.homework.noStudents,
+        });
       } else {
         setStudents(list);
       }
@@ -50,9 +63,12 @@ export function AssignHomeworkAction({ title, url }: { title: string; url: strin
       {students && (
         <HomeworkForm
           students={students}
-          prefill={{ title, resourceUrl: url }}
+          prefill={{ title, resourceUrl: url, languageTopicId }}
           onSaved={async () =>
-            setNotice({ severity: "success", text: "Домашнє завдання призначено" })
+            setNotice({
+              severity: "success",
+              text: "Домашнє завдання призначено",
+            })
           }
           onClose={() => setStudents(null)}
         />
@@ -64,7 +80,11 @@ export function AssignHomeworkAction({ title, url }: { title: string; url: strin
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         {notice ? (
-          <Alert severity={notice.severity} variant="filled" onClose={() => setNotice(null)}>
+          <Alert
+            severity={notice.severity}
+            variant="filled"
+            onClose={() => setNotice(null)}
+          >
             {notice.text}
           </Alert>
         ) : undefined}
