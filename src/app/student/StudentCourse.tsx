@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
+  Button,
   Chip,
   List,
   Stack,
@@ -13,6 +15,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircleOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LinkIcon from "@mui/icons-material/LinkOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import StyleIcon from "@mui/icons-material/StyleOutlined";
 import TranslateIcon from "@mui/icons-material/Translate";
 import { IconAction, ItemRow } from "@/components/ItemRow";
 import { PageSection } from "@/components/PageSection";
@@ -24,6 +27,7 @@ import {
 } from "@/lib/language-course";
 import type { TranslationKey } from "@/lib/language-messages";
 import { useAppLanguage } from "@/lib/LanguageProvider";
+import { WordTrainer } from "./WordTrainer";
 
 const SECTION_KEYS: Record<LanguageSection, TranslationKey> = {
   grammar: "sectionGrammar",
@@ -35,6 +39,7 @@ const SECTION_KEYS: Record<LanguageSection, TranslationKey> = {
 
 function CourseTopic({ topic }: { topic: StudentCourseTopic }) {
   const { t } = useAppLanguage();
+  const [training, setTraining] = useState(false);
   return (
     <Accordion
       disableGutters
@@ -63,10 +68,37 @@ function CourseTopic({ topic }: { topic: StudentCourseTopic }) {
               label={t("topicHomework", { count: topic.homeworkCount })}
             />
           )}
+          {topic.words.length > 0 && (
+            <Chip
+              size="small"
+              color="info"
+              variant="outlined"
+              icon={<StyleIcon />}
+              label={t("wordsCount", { count: topic.words.length })}
+            />
+          )}
         </Stack>
       </AccordionSummary>
       <AccordionDetails>
         <Stack spacing={1}>
+          {topic.words.length > 0 && (
+            <Button
+              variant="contained"
+              color="info"
+              startIcon={<StyleIcon />}
+              onClick={() => setTraining(true)}
+              sx={{ alignSelf: "flex-start" }}
+            >
+              {t("learnWords", { count: topic.words.length })}
+            </Button>
+          )}
+          {training && (
+            <WordTrainer
+              title={topic.title}
+              words={topic.words}
+              onClose={() => setTraining(false)}
+            />
+          )}
           {topic.description && (
             <Typography variant="body2" color="text.secondary">
               {topic.description}

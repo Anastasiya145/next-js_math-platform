@@ -3,14 +3,21 @@ import { getTeacherUser } from "@/lib/authz";
 import { errorMessages } from "@/lib/error-messages";
 import {
   addLanguageTopicMaterial,
+  addLanguageTopicWords,
   createLanguageTopic,
   deleteLanguageTopic,
   deleteLanguageTopicMaterial,
+  deleteLanguageTopicWord,
   listLanguageTopics,
   updateLanguageTopic,
   updateLanguageTopicMaterial,
 } from "@/lib/db";
-import { isLanguageLevel, isLanguageSection } from "@/lib/language-course";
+import {
+  MAX_WORDS_PER_BATCH,
+  isLanguageLevel,
+  isLanguageSection,
+  isWordInput,
+} from "@/lib/language-course";
 import { isLanguageCode } from "@/lib/languages";
 import { isHttpUrl, isPositiveInteger } from "@/lib/validation";
 
@@ -19,6 +26,8 @@ type PostBody = {
   language?: unknown;
   topicId?: unknown;
   materialId?: unknown;
+  wordId?: unknown;
+  words?: unknown;
   level?: unknown;
   section?: unknown;
   title?: unknown;
@@ -148,6 +157,38 @@ export async function POST(request: Request) {
         return fail(errorMessages.languageCourse.materialNotFound, 404);
       }
       return NextResponse.json({ data: { id: body.materialId } });
+    }
+    case "add-words": {
+      const words = Array.isArray(body.words) ? body.words : [];
+      if (
+        words.length === 0 ||
+        words.length > MAX_WORDS_PER_BATCH ||
+        !words.every(isWordInput)
+      ) {
+        return fail(errorMessages.languageCourse.invalidWords, 400);
+      }
+      const added = isPositiveInteger(body.topicId)
+        ? await addLanguageTopicWords(
+            body.topicId,
+            words.map((word) => ({
+              term: word.term.trim(),
+              translation: word.translation.trim(),
+              example: word.example.trim(),
+            })),
+          )
+        : 0;
+      if (added === 0)
+        return fail(errorMessages.languageCourse.topicNotFound, 404);
+      return NextResponse.json({ data: { added } }, { status: 201 });
+    }
+    case "delete-word": {
+      if (
+        !isPositiveInteger(body.wordId) ||
+        !(await deleteLanguageTopicWord(body.wordId))
+      ) {
+        return fail(errorMessages.languageCourse.wordNotFound, 404);
+      }
+      return NextResponse.json({ data: { id: body.wordId } });
     }
     default:
       return fail(errorMessages.common.unknownAction, 400);

@@ -34,6 +34,7 @@ import { PageSection } from "@/components/PageSection";
 import { toneAt } from "@/components/tones";
 import { router } from "../router";
 import { AssignHomeworkAction } from "../homework/AssignHomeworkAction";
+import { TopicWords } from "./TopicWords";
 
 const post = (body: Record<string, unknown>, fallback: string) =>
   api(router.api.languageTopics, { body, fallback });
@@ -152,6 +153,14 @@ function TopicItem({
                   label={`${topic.materials.length} мат.`}
                 />
               )}
+              {topic.words.length > 0 && (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color="info"
+                  label={`${topic.words.length} сл.`}
+                />
+              )}
             </Stack>
             {topic.description && (
               <Typography variant="body2" color="text.secondary">
@@ -229,6 +238,11 @@ function TopicItem({
               }}
             />
           </PageSection>
+          <TopicWords
+            topicId={topic.id}
+            words={topic.words}
+            onChanged={onChanged}
+          />
         </AccordionDetails>
       </Accordion>
     </ActionRow>

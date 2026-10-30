@@ -71,24 +71,68 @@ const theme = createTheme({
             `radial-gradient(760px 520px at -8% 108%, ${tint("secondary", 11)}, transparent 70%)`,
           ].join(","),
         },
+        "@keyframes fadeUp": {
+          from: { opacity: 0, transform: "translateY(12px)" },
+          to: { opacity: 1, transform: "none" },
+        },
+        "@keyframes popIn": {
+          "0%": { opacity: 0, transform: "scale(0.85)" },
+          "60%": { opacity: 1, transform: "scale(1.04)" },
+          "100%": { transform: "scale(1)" },
+        },
+        "@keyframes shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "20%, 60%": { transform: "translateX(-8px)" },
+          "40%, 80%": { transform: "translateX(8px)" },
+        },
+        "@keyframes loaderHop": {
+          "0%, 60%, 100%": { transform: "translateY(0) rotate(0deg)" },
+          "25%": { transform: "translateY(-60%) rotate(-8deg)" },
+          "40%": { transform: "translateY(0) scale(1.08, 0.9)" },
+        },
+        "@media (prefers-reduced-motion: reduce)": {
+          "*, *::before, *::after": {
+            animationDuration: "0.01ms !important",
+            animationIterationCount: "1 !important",
+            transitionDuration: "0.01ms !important",
+          },
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          transition:
+            "transform 0.18s cubic-bezier(.3,.7,.4,1.5), background-color 0.2s",
+          "&:hover": { transform: "scale(1.1)" },
+          "&:active:not(.Mui-disabled)": { transform: "scale(0.88)" },
+        },
       },
     },
     MuiButton: {
       defaultProps: { disableElevation: true, loadingPosition: "start" },
       styleOverrides: {
-        root: { borderRadius: 12 },
+        root: {
+          borderRadius: 12,
+          transition:
+            "transform 0.18s cubic-bezier(.3,.7,.4,1.5), box-shadow 0.2s, filter 0.2s",
+          "&:active:not(.Mui-disabled)": { transform: "scale(0.96)" },
+        },
         contained: ({ ownerState }) => {
           const tone = (ownerState.color ?? "primary") as Tone | "inherit";
           if (tone === "inherit") return {};
           return {
             background: gradientOf(tone),
             boxShadow: `0 8px 18px -8px ${tint(tone, 75)}`,
-            transition: "box-shadow 0.2s, transform 0.2s, filter 0.2s",
             "&:hover": {
               background: gradientOf(tone),
               filter: "brightness(1.08)",
               boxShadow: `0 12px 22px -8px ${tint(tone, 85)}`,
-              transform: "translateY(-1px)",
+              transform: "translateY(-2px)",
+            },
+            "&:active:not(.Mui-disabled)": {
+              transform: "translateY(0) scale(0.95)",
+              boxShadow: `0 4px 10px -6px ${tint(tone, 75)}`,
             },
             "&.Mui-disabled": {
               background: "var(--mui-palette-action-disabledBackground)",
@@ -105,12 +149,13 @@ const theme = createTheme({
           borderRadius: 20,
           border: `1px solid ${tint("primary", 12)}`,
           boxShadow: `0 1px 2px ${tint("primary", 8)}, 0 18px 34px -22px ${tint("primary", 55)}`,
+          animation: "fadeUp 0.45s cubic-bezier(.2,.8,.2,1) both",
         },
       },
     },
     MuiChip: {
       styleOverrides: {
-        root: { fontWeight: 600 },
+        root: { fontWeight: 600, animation: "popIn 0.35s ease-out both" },
         filled: ({ ownerState }) =>
           ownerState.color && ownerState.color !== "default"
             ? { background: gradientOf(ownerState.color as Tone) }

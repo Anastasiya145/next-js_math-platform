@@ -4,13 +4,12 @@ import type { ReactNode } from "react";
 import {
   Alert,
   Avatar,
-  Box,
   Card,
   CardContent,
   CardHeader,
-  CircularProgress,
   Typography,
 } from "@mui/material";
+import { Loader } from "./Loader";
 import { glow, gradientOf, shade, tint, type Tone } from "./tones";
 import { useAppLanguage } from "@/lib/LanguageProvider";
 
@@ -84,9 +83,7 @@ export function PageSection({
           </Alert>
         )}
         {loading ? (
-          <Box sx={{ textAlign: "center", py: 3 }}>
-            <CircularProgress aria-label={t("loading")} color={tone} />
-          </Box>
+          <Loader label={t("loading")} />
         ) : empty && !error ? (
           <Typography color="text.secondary">{emptyText}</Typography>
         ) : (

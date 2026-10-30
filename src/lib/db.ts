@@ -11,7 +11,9 @@ import {
   type LanguageSection,
   type LanguageTopic,
   type LanguageTopicMaterial,
+  type LanguageWord,
   type StudentCourseTopic,
+  type WordInput,
 } from "@/lib/language-course";
 import {
   buildLessons,
@@ -1400,22 +1402,75 @@ const toLanguageTopic = (row: DatabaseRow): LanguageTopic => ({
       url: String(material.url),
     }),
   ),
+  words: toJsonList(row.words).map(
+    (word): LanguageWord => ({
+      id: Number(word.id),
+      term: String(word.term),
+      translation: String(word.translation),
+      example: String(word.example ?? ""),
+    }),
+  ),
 });
+
+const topicWordsJson = `
+  COALESCE((
+    SELECT json_agg(json_build_object(
+      'id', w.id, 'term', w.term, 'translation', w.translation, 'example', w.example
+    ) ORDER BY w.id)
+    FROM language_topic_words w WHERE w.topic_id = t.id
+  ), '[]'::json) AS words`;
 
 export async function listLanguageTopics(
   language: LanguageCode,
 ): Promise<LanguageTopic[]> {
-  const rows = (await getDb()`
+  const rows = (await getDb().query(
+    `
     SELECT t.id, t.language, t.level, t.section, t.title, t.description, t.position,
       COALESCE((
         SELECT json_agg(json_build_object('id', m.id, 'name', m.name, 'url', m.url) ORDER BY m.id)
         FROM language_topic_materials m WHERE m.topic_id = t.id
-      ), '[]'::json) AS materials
+      ), '[]'::json) AS materials,
+      ${topicWordsJson}
     FROM language_topics t
-    WHERE t.language = ${language}
+    WHERE t.language = $1
     ORDER BY t.level, t.position, t.id
-  `) as DatabaseRow[];
+  `,
+    [language],
+  )) as DatabaseRow[];
   return rows.map(toLanguageTopic);
+}
+
+// Adds words only when the topic exists; returns how many were saved.
+export async function addLanguageTopicWords(
+  topicId: number,
+  words: WordInput[],
+): Promise<number> {
+  const values = words
+    .map(
+      (_, index) => `($${index * 3 + 2}, $${index * 3 + 3}, $${index * 3 + 4})`,
+    )
+    .join(", ");
+  const rows = (await getDb().query(
+    `INSERT INTO language_topic_words (topic_id, term, translation, example)
+     SELECT t.id, v.term, v.translation, v.example
+     FROM language_topics t CROSS JOIN (VALUES ${values}) AS v(term, translation, example)
+     WHERE t.id = $1
+     RETURNING id`,
+    [
+      topicId,
+      ...words.flatMap((word) => [word.term, word.translation, word.example]),
+    ],
+  )) as DatabaseRow[];
+  return rows.length;
+}
+
+export async function deleteLanguageTopicWord(
+  wordId: number,
+): Promise<boolean> {
+  const rows = (await getDb()`
+    DELETE FROM language_topic_words WHERE id = ${wordId} RETURNING id
+  `) as DatabaseRow[];
+  return rows.length > 0;
 }
 
 export async function languageTopicExists(topicId: number): Promise<boolean> {
@@ -1505,13 +1560,15 @@ export async function deleteLanguageTopicMaterial(
 export async function listStudentCourse(
   studentId: number,
 ): Promise<StudentCourseTopic[]> {
-  const rows = (await getDb()`
+  const rows = (await getDb().query(
+    `
     SELECT t.id, t.language, t.level, t.section, t.title, t.description, t.position,
       s.language_level AS "studentLevel",
       COALESCE((
         SELECT json_agg(json_build_object('id', m.id, 'name', m.name, 'url', m.url) ORDER BY m.id)
         FROM language_topic_materials m WHERE m.topic_id = t.id
       ), '[]'::json) AS materials,
+      ${topicWordsJson},
       EXISTS (
         SELECT 1 FROM lessons l
         WHERE l.student_id = s.id AND l.language_topic_id = t.id AND l.status = 'held'
@@ -1521,9 +1578,11 @@ export async function listStudentCourse(
         WHERE hs.student_id = s.id AND h.language_topic_id = t.id
       ) AS "homeworkCount"
     FROM students s JOIN language_topics t ON t.language = s.target_language
-    WHERE s.id = ${studentId} AND s.site_type = 'languages'
+    WHERE s.id = $1 AND s.site_type = 'languages'
     ORDER BY t.level, t.position, t.id
-  `) as DatabaseRow[];
+  `,
+    [studentId],
+  )) as DatabaseRow[];
   const studentLevel = rows[0]?.studentLevel;
   return rows
     .map((row) => ({

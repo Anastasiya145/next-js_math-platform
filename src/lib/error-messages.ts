@@ -216,6 +216,9 @@ export const errorMessages = {
     topicNotFound: "тему курсу не знайдено",
     materialNotFound: "матеріал не знайдено",
     levelInvalid: "Оберіть рівень мови (A1–C1).",
+    invalidWords:
+      "Кожен рядок: слово — переклад (— приклад речення). До 200 слів за раз.",
+    wordNotFound: "слово не знайдено",
   },
 } as const;
 
